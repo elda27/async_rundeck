@@ -82,15 +82,12 @@ def _parse_definitions(definitions: Dict[str, Property]) -> List[ast.AST]:
         _description_
     """
     definitions_cache = OrderedDict()
-    definitions_ast = [
-        _parse_definition(name, definition, definitions_cache, top_level=True)
-        for name, definition in definitions.items()
-    ]
+    for name, definition in definitions.items():
+        definitions_cache[name] = _parse_definition(
+            name, definition, definitions_cache, top_level=True
+        )
 
-    return (
-        list(filter(lambda x: x is not None, definitions_cache.values()))
-        + definitions_ast
-    )
+    return list(filter(lambda x: x is not None, definitions_cache.values()))
 
 
 def _parse_definition(
@@ -102,7 +99,9 @@ def _parse_definition(
     **kwargs,
 ) -> ast.AST:
     if definition.enum is not None:
-        return _parse_enum(name, definition, definitions_cache, **kwargs)
+        return _parse_enum(
+            name, definition, definitions_cache, top_level=top_level, **kwargs
+        )
     elif definition.type is not None:
         if definition.type == "array":
             return _parse_array(name, definition, definitions_cache, **kwargs)
@@ -112,7 +111,9 @@ def _parse_definition(
         return _parse_value(name, definition, definitions_cache, **kwargs)
     else:  # Class declaration
         if top_level:
-            return _parse_class_def(name, definition, definitions_cache, **kwargs)
+            klass = _parse_class_def(name, definition, definitions_cache, **kwargs)
+            definitions_cache[klass.name] = None
+            return klass
         else:
             # Special case for nested classes
             klass = _parse_class_def(name, definition, definitions_cache, **kwargs)
@@ -144,6 +145,7 @@ def _parse_class_def(
     **kwargs,
 ) -> ast.AST:
     required = definition.required or []
+
     return ast.ClassDef(
         name=stringcase.pascalcase(name),
         bases=[ast.Name(id="BaseModel", ctx=ast.Load())],  # derrived pydantic.BaseModel
@@ -195,7 +197,7 @@ def _parse_value(
 ) -> ast.AnnAssign:
     if definition.ref is not None:
         type = definition.ref.split("/")[-1]
-        cache[type] = None
+        # cache[type] = None
     else:
         type = definition.type
 
@@ -221,7 +223,7 @@ def _parse_array(
     if definition.items is not None:
         if definition.items.ref is not None:
             type = definition.items.ref.split("/")[-1]
-            cache[type] = None
+            # cache[type] = None
         else:
             type = definition.items.type
     else:
@@ -250,11 +252,14 @@ def _parse_array(
 
 
 def _parse_enum(
-    name: str, definition: Property, cache: Dict[str, str], required=False
+    name: str,
+    definition: Property,
+    cache: Dict[str, str],
+    top_level=False,
+    required=False,
 ) -> ast.ClassDef:
     type_id = stringcase.pascalcase(name)
-    # cache[name] = None
-    cache[name] = ast.ClassDef(
+    enum = ast.ClassDef(
         name=type_id,
         bases=[ast.Name(id="Enum", ctx=ast.Load())],
         keywords=[],
@@ -267,17 +272,22 @@ def _parse_enum(
             for value in definition.enum
         ],
     )
-    return ast.AnnAssign(
-        target=ast.Name(id=_format_property_name(name), ctx=ast.Store()),
-        annotation=_as_optional_if_required(
-            ast.Name(id=_format_type(type_id, cache), ctx=ast.Load()), required
-        ),
-        value=ast.Call(
-            func=ast.Name(id="Field", ctx=ast.Load()),
-            args=[],
-            keywords=[
-                ast.keyword(arg="alias", value=ast.Constant(value=name, kind=None))
-            ],
-        ),
-        simple=1,
-    )
+    if top_level:
+        cache[type_id] = None
+        return enum
+    else:
+        cache[type_id] = enum
+        return ast.AnnAssign(
+            target=ast.Name(id=_format_property_name(name), ctx=ast.Store()),
+            annotation=_as_optional_if_required(
+                ast.Name(id=_format_type(type_id, cache), ctx=ast.Load()), required
+            ),
+            value=ast.Call(
+                func=ast.Name(id="Field", ctx=ast.Load()),
+                args=[],
+                keywords=[
+                    ast.keyword(arg="alias", value=ast.Constant(value=name, kind=None))
+                ],
+            ),
+            simple=1,
+        )

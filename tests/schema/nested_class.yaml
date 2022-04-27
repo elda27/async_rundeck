@@ -1,0 +1,21 @@
+
+RefTestPre:
+  properties: 
+    value: {type: number}
+
+
+Test:
+  properties:
+    alpha: 
+      properties:
+        x: {type: number}
+        y: {type: number}
+    beta: 
+      properties:
+        pre_value: {$ref: "#/definitions/RefTestPre"}
+        post_value: {$ref: "#/definitions/RefTestPost"}
+
+RefTestPost:
+  properties: 
+    value: {type: number}
+

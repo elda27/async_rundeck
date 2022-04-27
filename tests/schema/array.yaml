@@ -1,0 +1,20 @@
+TestRequired:
+  properties:
+    value: {
+      type: array,
+      items: {
+        $ref: "#/definitions/RefTest"
+      }
+    }
+  required: ["value"]
+Test:
+  properties:
+    value: {
+      type: array,
+      items: {
+        $ref: "#/definitions/RefTest"
+      }
+    }
+RefTest:
+  properties: 
+    value: {$ref: "#/definitions/Pod"}

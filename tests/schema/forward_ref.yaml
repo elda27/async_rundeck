@@ -1,0 +1,10 @@
+Pod:
+  properties: 
+    value: {$ref: "#/definitions/Test"}
+  required: ["value"]
+Test:
+  properties:
+    value: {$ref: "#/definitions/RefTest"}
+RefTest:
+  properties: 
+    value: {$ref: "#/definitions/Pod"}
