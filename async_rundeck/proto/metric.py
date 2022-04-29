@@ -4,6 +4,10 @@ from enum import Enum
 from typing import List, Optional
 from pydantic import BaseModel, Field, parse_obj_as
 from async_rundeck.proto.json_types import Integer, Number, String, Boolean, Object
+from enum import Enum
+from typing import List, Optional, Union
+from pydantic import BaseModel, Field
+from async_rundeck.proto.json_types import Integer, Number, String, Boolean, Object
 from async_rundeck.client import RundeckClient
 from async_rundeck.exceptions import RundeckError, VersionError
 
@@ -23,6 +27,6 @@ async def metric_list(session: RundeckClient, entrypoint: str, version: int) -> 
                 else:
                     return response_type(obj)
             except KeyError:
-                raise RundeckError("Unknwon response code: {url}({response.status})")
+                raise RundeckError(f"Unknwon response code: {url}({response.status})")
         else:
             raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")

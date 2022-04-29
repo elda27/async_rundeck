@@ -4,8 +4,20 @@ from enum import Enum
 from typing import List, Optional
 from pydantic import BaseModel, Field, parse_obj_as
 from async_rundeck.proto.json_types import Integer, Number, String, Boolean, Object
+from enum import Enum
+from typing import List, Optional, Union
+from pydantic import BaseModel, Field
+from async_rundeck.proto.json_types import Integer, Number, String, Boolean, Object
 from async_rundeck.client import RundeckClient
 from async_rundeck.exceptions import RundeckError, VersionError
+from async_rundeck.proto.definitions import (
+    Execution,
+    JobExecutionDelete,
+    ExecutionState,
+    JobInputFileInfo,
+    ExecutionList,
+    ExecutionOutput,
+)
 
 
 class ExecutionBulkDeleteRequest(BaseModel):
@@ -13,7 +25,7 @@ class ExecutionBulkDeleteRequest(BaseModel):
 
 
 class ExecutionInputFilesListResponse(BaseModel):
-    files: List[JobInputFileInfo] = Field(alias="files")
+    files: List["JobInputFileInfo"] = Field(alias="files")
 
 
 async def execution_status_get(
@@ -33,7 +45,7 @@ async def execution_status_get(
                 else:
                     return response_type(obj)
             except KeyError:
-                raise RundeckError("Unknwon response code: {url}({response.status})")
+                raise RundeckError(f"Unknwon response code: {url}({response.status})")
         else:
             raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
 
@@ -55,7 +67,7 @@ async def execution_delete(
                 else:
                     return response_type(obj)
             except KeyError:
-                raise RundeckError("Unknwon response code: {url}({response.status})")
+                raise RundeckError(f"Unknwon response code: {url}({response.status})")
         else:
             raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
 
@@ -82,7 +94,7 @@ async def execution_bulk_delete(
                 else:
                     return response_type(obj)
             except KeyError:
-                raise RundeckError("Unknwon response code: {url}({response.status})")
+                raise RundeckError(f"Unknwon response code: {url}({response.status})")
         else:
             raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
 
@@ -106,7 +118,7 @@ async def execution_state_get(
                 else:
                     return response_type(obj)
             except KeyError:
-                raise RundeckError("Unknwon response code: {url}({response.status})")
+                raise RundeckError(f"Unknwon response code: {url}({response.status})")
         else:
             raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
 
@@ -132,7 +144,7 @@ async def execution_input_files_list(
                 else:
                     return response_type(obj)
             except KeyError:
-                raise RundeckError("Unknwon response code: {url}({response.status})")
+                raise RundeckError(f"Unknwon response code: {url}({response.status})")
         else:
             raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
 
@@ -156,7 +168,7 @@ async def execution_list_running(
                 else:
                     return response_type(obj)
             except KeyError:
-                raise RundeckError("Unknwon response code: {url}({response.status})")
+                raise RundeckError(f"Unknwon response code: {url}({response.status})")
         else:
             raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
 
@@ -204,7 +216,7 @@ async def execution_query(
                 else:
                     return response_type(obj)
             except KeyError:
-                raise RundeckError("Unknwon response code: {url}({response.status})")
+                raise RundeckError(f"Unknwon response code: {url}({response.status})")
         else:
             raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
 
@@ -236,6 +248,6 @@ async def execution_output_get(
                 else:
                     return response_type(obj)
             except KeyError:
-                raise RundeckError("Unknwon response code: {url}({response.status})")
+                raise RundeckError(f"Unknwon response code: {url}({response.status})")
         else:
             raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")

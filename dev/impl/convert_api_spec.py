@@ -17,10 +17,6 @@ from dev.impl.special_cases import special_case_property
 ParameterTypes = Literal["query", "path", "header", "cookie", "body"]
 
 
-class ApiSpec(BaseModel):
-    pass
-
-
 def convert_api_specs(api_spec_dir: Path) -> Dict[str, ast.AST]:
     asts = {}
     for spec_file in (api_spec_dir / "rundeck").glob("*.yaml"):
@@ -40,7 +36,7 @@ def convert_api_spec(spec_file: Path) -> ast.AST:
         version = int(url.split("/")[2])
 
         for method, detail in details.items():
-            responses = _get_returns(detail, cache)
+            responses = _get_responses(detail, cache)
             response_ast = None
             if len(responses) > 1:
                 response_ast = ast.Subscript(
@@ -130,11 +126,48 @@ def convert_api_spec(spec_file: Path) -> ast.AST:
     new_classes = []
     for name, classdef in cache.items():
         if classdef is None:
-            defined_classes.append(ast.alias(name=name, asname=None))
+            if name not in ["Object", "String", "Number", "Boolean", "Array"]:
+                defined_classes.append(ast.alias(name=name.strip('"\n'), asname=None))
         else:
             new_classes.append(classdef)
 
     import_statements = [
+        ast.ImportFrom(
+            module="enum",
+            names=[
+                ast.alias(name="Enum", asname=None),
+            ],
+            level=0,
+        ),
+        ast.ImportFrom(
+            module="typing",
+            names=[
+                ast.alias(name="List", asname=None),
+                ast.alias(name="Optional", asname=None),
+                ast.alias(name="Union", asname=None),
+            ],
+            level=0,
+        ),
+        ast.ImportFrom(
+            module="pydantic",
+            names=[
+                ast.alias(name="parse_obj_as", asname=None),
+                ast.alias(name="BaseModel", asname=None),
+                ast.alias(name="Field", asname=None),
+            ],
+            level=0,
+        ),
+        ast.ImportFrom(
+            module="async_rundeck.proto.json_types",
+            names=[
+                ast.alias(name="Integer", asname=None),
+                ast.alias(name="Number", asname=None),
+                ast.alias(name="String", asname=None),
+                ast.alias(name="Boolean", asname=None),
+                ast.alias(name="Object", asname=None),
+            ],
+            level=0,
+        ),
         ast.ImportFrom(
             module="async_rundeck.client",
             names=[ast.alias(name="RundeckClient", asname=None)],
@@ -150,41 +183,42 @@ def convert_api_spec(spec_file: Path) -> ast.AST:
         ),
     ]
     if len(defined_classes) > 0:
-        defined_classes.append(
+        import_statements.append(
             ast.ImportFrom(
-                module="async_rundeck.proto.definitions", names=defined_classes, level=0
+                module="async_rundeck.proto.definitions",
+                names=defined_classes,
+                level=0,
             )
         )
     return import_statements + new_classes + functions
 
 
-def _get_returns(
+def _get_responses(
     detail: Dict[str, Any], cache: Dict[str, ast.ClassDef] = {}
 ) -> Dict[str, Optional[ast.AST]]:
     responses = {}
+    refs = {}
     for code, response in detail["responses"].items():
         if "schema" in response:
             schema = response["schema"]
 
             if "type" in schema or "$ref" in schema:
-                schema = response["schema"]
+                if "$ref" in schema:
+                    cache[schema["$ref"].split("/")[-1]] = None
                 type_id = stringcase.pascalcase(detail["operationId"]) + "Response"
                 ann_assign = _parse_definition(
-                    type_id,
-                    Property.parse_obj(schema),
-                    cache,
+                    type_id, Property.parse_obj(schema), cache, refs=refs
                 )
                 responses[code] = ann_assign.annotation
             else:
                 type_id = stringcase.pascalcase(detail["operationId"]) + "Response"
-                _parse_definition(
-                    type_id,
-                    Property.parse_obj(schema),
-                    cache,
-                )
+                _parse_definition(type_id, Property.parse_obj(schema), cache, refs=refs)
                 responses[code] = ast.Name(id=type_id, ctx=ast.Load())
         else:
             responses[code] = ast.Constant(value=None)
+    for name in refs.values():
+        if name not in cache:
+            cache[name] = None
     return responses
 
 
@@ -198,7 +232,8 @@ def _get_parameters(
     parameters = {}
     kw_parameters = {}
     defaults = {}
-    flatten_str = {}
+    refs = {}
+
     for param in detail.get("parameters", []):
         param_name = param["name"]
         if param_name in special_case_property:
@@ -208,7 +243,7 @@ def _get_parameters(
 
         if "schema" in param:
             ann_assign = _parse_definition(
-                param_name, Property.parse_obj(param["schema"]), cache
+                param_name, Property.parse_obj(param["schema"]), cache, refs=refs
             )
             type_id = astor.to_source(ann_assign.annotation)
             if type_id.startswith("Optional"):
@@ -236,6 +271,9 @@ def _get_parameters(
             )
         if "default" in param:
             defaults[param_name] = ast.Constant(value=param["default"], kind=None)
+    for name in refs.values():
+        if name not in cache:
+            cache[name] = None
     return parameters, kw_parameters, defaults
 
 
@@ -253,7 +291,7 @@ function_body = """async def func(client: "RundeckClient", **kwargs) -> T:
                 else:
                     return response_type(obj)
             except KeyError:
-                raise RundeckError("Unknwon response code: {{url}}({{response.status}})")
+                raise RundeckError(f"Unknwon response code: {{url}}({{response.status}})")
         else:
             raise RundeckError(
                 f"Connection diffused: {{url}}({{response.status}})\\n{{obj}}")
@@ -287,7 +325,10 @@ def generate_body(
                 responses="{"
                 + (
                     ",".join(
-                        [f"'{k}':{astor.to_source(t)}" for k, t in responses.items()]
+                        [
+                            "'{k}':{v}".format(k=k, v=astor.to_source(t).strip("'\"\n"))
+                            for k, t in responses.items()
+                        ]
                     )
                 )
                 + "}",

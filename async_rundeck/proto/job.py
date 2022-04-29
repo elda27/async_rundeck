@@ -4,8 +4,28 @@ from enum import Enum
 from typing import List, Optional
 from pydantic import BaseModel, Field, parse_obj_as
 from async_rundeck.proto.json_types import Integer, Number, String, Boolean, Object
+from enum import Enum
+from typing import List, Optional, Union
+from pydantic import BaseModel, Field
+from async_rundeck.proto.json_types import Integer, Number, String, Boolean, Object
 from async_rundeck.client import RundeckClient
 from async_rundeck.exceptions import RundeckError, VersionError
+from async_rundeck.proto.definitions import (
+    Job,
+    ExecutionList,
+    Execution,
+    ExecuteJobRequest,
+    ExecuteJobRequest,
+    JobExecutionDelete,
+    RetryExecutionRequest,
+    RetryExecutionRequest,
+    JobMetadata,
+    JobBulkOperationResponse,
+    Object,
+    JobInputFileListResponse,
+    JobInputFileInfo,
+    WorkflowStep,
+)
 
 
 class JobBulkDeleteRequest(BaseModel):
@@ -45,7 +65,7 @@ class JobScheduleBulkDisableRequest(BaseModel):
 
 
 class JobWorkflowGetResponse(BaseModel):
-    workflow: List[WorkflowStep] = Field(alias="workflow")
+    workflow: List["WorkflowStep"] = Field(alias="workflow")
 
 
 async def job_list(
@@ -61,7 +81,7 @@ async def job_list(
     group_path_exact: Optional[String] = None,
     scheduled_filter: Optional[Boolean] = None,
     server_node_uuid_filter: Optional[String] = None,
-) -> List[Job]:
+) -> List["Job"]:
     """List the jobs that exist for a project"""
     if version < 26:
         raise VersionError(f"Insufficient api version error, Required >26")
@@ -85,13 +105,13 @@ async def job_list(
         obj = await response.text()
         if response.ok():
             try:
-                response_type = {"200": List[Job]}[response.status]
+                response_type = {"200": List["Job"]}[response.status]
                 if issubclass(response_type, BaseModel):
                     return parse_obj_as(response_type, obj)
                 else:
                     return response_type(obj)
             except KeyError:
-                raise RundeckError("Unknwon response code: {url}({response.status})")
+                raise RundeckError(f"Unknwon response code: {url}({response.status})")
         else:
             raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
 
@@ -115,7 +135,7 @@ async def job_execution_list(
                 else:
                     return response_type(obj)
             except KeyError:
-                raise RundeckError("Unknwon response code: {url}({response.status})")
+                raise RundeckError(f"Unknwon response code: {url}({response.status})")
         else:
             raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
 
@@ -126,7 +146,7 @@ async def job_execution_run(
     version: int,
     id: String,
     *,
-    request: Optional[ExecuteJobRequest] = None,
+    request: Optional["ExecuteJobRequest"] = None,
 ) -> Execution:
     """Run the specified job"""
     if version < 26:
@@ -146,7 +166,7 @@ async def job_execution_run(
                 else:
                     return response_type(obj)
             except KeyError:
-                raise RundeckError("Unknwon response code: {url}({response.status})")
+                raise RundeckError(f"Unknwon response code: {url}({response.status})")
         else:
             raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
 
@@ -170,7 +190,7 @@ async def job_execution_delete(
                 else:
                     return response_type(obj)
             except KeyError:
-                raise RundeckError("Unknwon response code: {url}({response.status})")
+                raise RundeckError(f"Unknwon response code: {url}({response.status})")
         else:
             raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
 
@@ -182,7 +202,7 @@ async def job_retry_execution(
     job_i_d: String,
     execution_i_d: Integer,
     *,
-    request: Optional[RetryExecutionRequest] = None,
+    request: Optional["RetryExecutionRequest"] = None,
 ) -> ExecutionList:
     """Retry a failed job execution on failed nodes only or on the same as the execution. This is the same functionality as the `Retry Failed Nodes ...` button on the execution page."""
     if version < 26:
@@ -202,7 +222,7 @@ async def job_retry_execution(
                 else:
                     return response_type(obj)
             except KeyError:
-                raise RundeckError("Unknwon response code: {url}({response.status})")
+                raise RundeckError(f"Unknwon response code: {url}({response.status})")
         else:
             raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
 
@@ -231,7 +251,7 @@ async def job_get(
                 else:
                     return response_type(obj)
             except KeyError:
-                raise RundeckError("Unknwon response code: {url}({response.status})")
+                raise RundeckError(f"Unknwon response code: {url}({response.status})")
         else:
             raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
 
@@ -253,7 +273,7 @@ async def job_delete(
                 else:
                     return response_type(obj)
             except KeyError:
-                raise RundeckError("Unknwon response code: {url}({response.status})")
+                raise RundeckError(f"Unknwon response code: {url}({response.status})")
         else:
             raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
 
@@ -275,7 +295,7 @@ async def job_info_get(
                 else:
                     return response_type(obj)
             except KeyError:
-                raise RundeckError("Unknwon response code: {url}({response.status})")
+                raise RundeckError(f"Unknwon response code: {url}({response.status})")
         else:
             raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
 
@@ -302,7 +322,7 @@ async def job_bulk_delete(
                 else:
                     return response_type(obj)
             except KeyError:
-                raise RundeckError("Unknwon response code: {url}({response.status})")
+                raise RundeckError(f"Unknwon response code: {url}({response.status})")
         else:
             raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
 
@@ -326,7 +346,7 @@ async def job_execution_enable(
                 else:
                     return response_type(obj)
             except KeyError:
-                raise RundeckError("Unknwon response code: {url}({response.status})")
+                raise RundeckError(f"Unknwon response code: {url}({response.status})")
         else:
             raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
 
@@ -350,7 +370,7 @@ async def job_execution_disable(
                 else:
                     return response_type(obj)
             except KeyError:
-                raise RundeckError("Unknwon response code: {url}({response.status})")
+                raise RundeckError(f"Unknwon response code: {url}({response.status})")
         else:
             raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
 
@@ -374,7 +394,7 @@ async def job_schedule_enable(
                 else:
                     return response_type(obj)
             except KeyError:
-                raise RundeckError("Unknwon response code: {url}({response.status})")
+                raise RundeckError(f"Unknwon response code: {url}({response.status})")
         else:
             raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
 
@@ -398,7 +418,7 @@ async def job_schedule_disable(
                 else:
                     return response_type(obj)
             except KeyError:
-                raise RundeckError("Unknwon response code: {url}({response.status})")
+                raise RundeckError(f"Unknwon response code: {url}({response.status})")
         else:
             raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
 
@@ -428,7 +448,7 @@ async def job_execution_bulk_enable(
                 else:
                     return response_type(obj)
             except KeyError:
-                raise RundeckError("Unknwon response code: {url}({response.status})")
+                raise RundeckError(f"Unknwon response code: {url}({response.status})")
         else:
             raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
 
@@ -458,7 +478,7 @@ async def job_execution_bulk_disable(
                 else:
                     return response_type(obj)
             except KeyError:
-                raise RundeckError("Unknwon response code: {url}({response.status})")
+                raise RundeckError(f"Unknwon response code: {url}({response.status})")
         else:
             raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
 
@@ -485,7 +505,7 @@ async def job_schedule_bulk_enable(
                 else:
                     return response_type(obj)
             except KeyError:
-                raise RundeckError("Unknwon response code: {url}({response.status})")
+                raise RundeckError(f"Unknwon response code: {url}({response.status})")
         else:
             raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
 
@@ -515,7 +535,7 @@ async def job_schedule_bulk_disable(
                 else:
                     return response_type(obj)
             except KeyError:
-                raise RundeckError("Unknwon response code: {url}({response.status})")
+                raise RundeckError(f"Unknwon response code: {url}({response.status})")
         else:
             raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
 
@@ -550,7 +570,7 @@ async def job_input_file_upload(
                 else:
                     return response_type(obj)
             except KeyError:
-                raise RundeckError("Unknwon response code: {url}({response.status})")
+                raise RundeckError(f"Unknwon response code: {url}({response.status})")
         else:
             raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
 
@@ -574,7 +594,7 @@ async def job_input_file_upload(
                 else:
                     return response_type(obj)
             except KeyError:
-                raise RundeckError("Unknwon response code: {url}({response.status})")
+                raise RundeckError(f"Unknwon response code: {url}({response.status})")
         else:
             raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
 
@@ -596,7 +616,7 @@ async def job_input_file_info_get(
                 else:
                     return response_type(obj)
             except KeyError:
-                raise RundeckError("Unknwon response code: {url}({response.status})")
+                raise RundeckError(f"Unknwon response code: {url}({response.status})")
         else:
             raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
 
@@ -618,6 +638,6 @@ async def job_workflow_get(
                 else:
                     return response_type(obj)
             except KeyError:
-                raise RundeckError("Unknwon response code: {url}({response.status})")
+                raise RundeckError(f"Unknwon response code: {url}({response.status})")
         else:
             raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")

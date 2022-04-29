@@ -4,8 +4,18 @@ from enum import Enum
 from typing import List, Optional
 from pydantic import BaseModel, Field, parse_obj_as
 from async_rundeck.proto.json_types import Integer, Number, String, Boolean, Object
+from enum import Enum
+from typing import List, Optional, Union
+from pydantic import BaseModel, Field
+from async_rundeck.proto.json_types import Integer, Number, String, Boolean, Object
 from async_rundeck.client import RundeckClient
 from async_rundeck.exceptions import RundeckError, VersionError
+from async_rundeck.proto.definitions import (
+    User,
+    ModifyUserRequest,
+    ModifyUserRequest,
+    ModifyUserRequest,
+)
 
 
 class UserRoleListResponse(BaseModel):
@@ -14,7 +24,7 @@ class UserRoleListResponse(BaseModel):
 
 async def user_list(
     session: RundeckClient, entrypoint: str, version: int
-) -> List[User]:
+) -> List["User"]:
     """List user profiles"""
     if version < 26:
         raise VersionError(f"Insufficient api version error, Required >26")
@@ -23,13 +33,13 @@ async def user_list(
         obj = await response.text()
         if response.ok():
             try:
-                response_type = {"200": List[User]}[response.status]
+                response_type = {"200": List["User"]}[response.status]
                 if issubclass(response_type, BaseModel):
                     return parse_obj_as(response_type, obj)
                 else:
                     return response_type(obj)
             except KeyError:
-                raise RundeckError("Unknwon response code: {url}({response.status})")
+                raise RundeckError(f"Unknwon response code: {url}({response.status})")
         else:
             raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
 
@@ -51,13 +61,13 @@ async def user_profile_get(
                 else:
                     return response_type(obj)
             except KeyError:
-                raise RundeckError("Unknwon response code: {url}({response.status})")
+                raise RundeckError(f"Unknwon response code: {url}({response.status})")
         else:
             raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
 
 
 async def user_profile_update(
-    session: RundeckClient, entrypoint: str, version: int, user: ModifyUserRequest
+    session: RundeckClient, entrypoint: str, version: int, user: "ModifyUserRequest"
 ) -> User:
     """Modify same user profile data"""
     if version < 26:
@@ -75,7 +85,7 @@ async def user_profile_update(
                 else:
                     return response_type(obj)
             except KeyError:
-                raise RundeckError("Unknwon response code: {url}({response.status})")
+                raise RundeckError(f"Unknwon response code: {url}({response.status})")
         else:
             raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
 
@@ -99,7 +109,7 @@ async def user_profile_get_by_id(
                 else:
                     return response_type(obj)
             except KeyError:
-                raise RundeckError("Unknwon response code: {url}({response.status})")
+                raise RundeckError(f"Unknwon response code: {url}({response.status})")
         else:
             raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
 
@@ -129,7 +139,7 @@ async def user_profile_update_by_id(
                 else:
                     return response_type(obj)
             except KeyError:
-                raise RundeckError("Unknwon response code: {url}({response.status})")
+                raise RundeckError(f"Unknwon response code: {url}({response.status})")
         else:
             raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
 
@@ -151,6 +161,6 @@ async def user_role_list(
                 else:
                     return response_type(obj)
             except KeyError:
-                raise RundeckError("Unknwon response code: {url}({response.status})")
+                raise RundeckError(f"Unknwon response code: {url}({response.status})")
         else:
             raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")

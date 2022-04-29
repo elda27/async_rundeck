@@ -96,27 +96,61 @@ def _parse_definition(
     definitions_cache: Dict[str, ast.ClassDef],
     *,
     top_level=False,
+    refs: Dict[str, str] = None,
     **kwargs,
 ) -> ast.AST:
+    """Parse definition from JSON schema
+
+    Parameters
+    ----------
+    name : str
+        Name of the parent field
+    definition : Property
+        definition to parse
+    definitions_cache : Dict[str, ast.ClassDef]
+        cache of classes if definition field has nested schema
+    top_level : bool, optional
+        To detect recursion call, by default False
+    refs : Dict[str, str], optional
+        Storing found references, by default None
+
+    Returns
+    -------
+    ast.AST
+        Parsed abstract syntax tree
+    """
     if definition.enum is not None:
         return _parse_enum(
-            name, definition, definitions_cache, top_level=top_level, **kwargs
+            name,
+            definition,
+            definitions_cache,
+            top_level=top_level,
+            # refs=refs,
+            **kwargs,
         )
     elif definition.type is not None:
         if definition.type == "array":
-            return _parse_array(name, definition, definitions_cache, **kwargs)
+            return _parse_array(
+                name, definition, definitions_cache, refs=refs, **kwargs
+            )
         else:
-            return _parse_value(name, definition, definitions_cache, **kwargs)
+            return _parse_value(
+                name, definition, definitions_cache, refs=refs, **kwargs
+            )
     elif definition.ref is not None:
-        return _parse_value(name, definition, definitions_cache, **kwargs)
+        return _parse_value(name, definition, definitions_cache, refs=refs, **kwargs)
     else:  # Class declaration
         if top_level:
-            klass = _parse_class_def(name, definition, definitions_cache, **kwargs)
+            klass = _parse_class_def(
+                name, definition, definitions_cache, refs=refs, **kwargs
+            )
             definitions_cache[klass.name] = None
             return klass
         else:
             # Special case for nested classes
-            klass = _parse_class_def(name, definition, definitions_cache, **kwargs)
+            klass = _parse_class_def(
+                name, definition, definitions_cache, refs=refs, **kwargs
+            )
             definitions_cache[klass.name] = klass
             return ast.AnnAssign(
                 target=ast.Name(id=stringcase.snakecase(name), ctx=ast.Store()),
@@ -142,6 +176,7 @@ def _parse_class_def(
     name: str,
     definition: Property,
     definitions_cache: Dict[str, ast.ClassDef],
+    required: bool = False,
     **kwargs,
 ) -> ast.AST:
     required = definition.required or []
@@ -156,6 +191,7 @@ def _parse_class_def(
                 child_prop,
                 definitions_cache,
                 required=child_name in required,
+                **kwargs,
             )
             for child_name, child_prop in definition.properties.items()
         ],
@@ -193,11 +229,17 @@ def _format_property_name(name: str) -> str:
 
 
 def _parse_value(
-    name: str, definition: Property, cache: Dict[str, str], *, required=True
+    name: str,
+    definition: Property,
+    cache: Dict[str, str],
+    *,
+    required=True,
+    refs: Dict[str, str] = None,
 ) -> ast.AnnAssign:
     if definition.ref is not None:
         type = definition.ref.split("/")[-1]
-        # cache[type] = None
+        if refs is not None and type not in refs:
+            refs[definition.ref] = type
     else:
         type = definition.type
 
@@ -218,12 +260,18 @@ def _parse_value(
 
 
 def _parse_array(
-    name: str, definition: Property, cache: Dict[str, str], *, required=True
+    name: str,
+    definition: Property,
+    cache: Dict[str, str],
+    *,
+    required=True,
+    refs: Dict[str, str] = None,
 ) -> ast.AnnAssign:
     if definition.items is not None:
         if definition.items.ref is not None:
             type = definition.items.ref.split("/")[-1]
-            # cache[type] = None
+            if refs is not None and type not in refs:
+                refs[definition.items.ref] = type
         else:
             type = definition.items.type
     else:

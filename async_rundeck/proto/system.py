@@ -4,8 +4,22 @@ from enum import Enum
 from typing import List, Optional
 from pydantic import BaseModel, Field, parse_obj_as
 from async_rundeck.proto.json_types import Integer, Number, String, Boolean, Object
+from enum import Enum
+from typing import List, Optional, Union
+from pydantic import BaseModel, Field
+from async_rundeck.proto.json_types import Integer, Number, String, Boolean, Object
 from async_rundeck.client import RundeckClient
 from async_rundeck.exceptions import RundeckError, VersionError
+from async_rundeck.proto.definitions import (
+    SystemInfo,
+    LogStorage,
+    IncompleteLogExecutions,
+    TakeoverScheduleResponse,
+    Job,
+    AclList,
+    AclPolicyResponse,
+    InvalidAclPolicyResponse,
+)
 
 
 class SystemIncompleteLogStorageExecutionsResumeResponse(BaseModel):
@@ -51,7 +65,7 @@ async def system_info_get(
                 else:
                     return response_type(obj)
             except KeyError:
-                raise RundeckError("Unknwon response code: {url}({response.status})")
+                raise RundeckError(f"Unknwon response code: {url}({response.status})")
         else:
             raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
 
@@ -73,7 +87,7 @@ async def system_log_storage_info_get(
                 else:
                     return response_type(obj)
             except KeyError:
-                raise RundeckError("Unknwon response code: {url}({response.status})")
+                raise RundeckError(f"Unknwon response code: {url}({response.status})")
         else:
             raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
 
@@ -97,7 +111,7 @@ async def system_incomplete_log_storage_executions_get(
                 else:
                     return response_type(obj)
             except KeyError:
-                raise RundeckError("Unknwon response code: {url}({response.status})")
+                raise RundeckError(f"Unknwon response code: {url}({response.status})")
         else:
             raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
 
@@ -123,7 +137,7 @@ async def system_incomplete_log_storage_executions_resume(
                 else:
                     return response_type(obj)
             except KeyError:
-                raise RundeckError("Unknwon response code: {url}({response.status})")
+                raise RundeckError(f"Unknwon response code: {url}({response.status})")
         else:
             raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
 
@@ -145,7 +159,7 @@ async def system_executions_enable(
                 else:
                     return response_type(obj)
             except KeyError:
-                raise RundeckError("Unknwon response code: {url}({response.status})")
+                raise RundeckError(f"Unknwon response code: {url}({response.status})")
         else:
             raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
 
@@ -171,7 +185,7 @@ async def system_executions_disable(
                 else:
                     return response_type(obj)
             except KeyError:
-                raise RundeckError("Unknwon response code: {url}({response.status})")
+                raise RundeckError(f"Unknwon response code: {url}({response.status})")
         else:
             raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
 
@@ -199,14 +213,14 @@ async def system_scheduler_takeover(
                 else:
                     return response_type(obj)
             except KeyError:
-                raise RundeckError("Unknwon response code: {url}({response.status})")
+                raise RundeckError(f"Unknwon response code: {url}({response.status})")
         else:
             raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
 
 
 async def system_scheduled_jobs_for_server(
     session: RundeckClient, entrypoint: str, version: int, uuid: String
-) -> List[Job]:
+) -> List["Job"]:
     """List the scheduled Jobs with their schedule owned by the cluster server with the specified UUID"""
     if version < 26:
         raise VersionError(f"Insufficient api version error, Required >26")
@@ -217,13 +231,13 @@ async def system_scheduled_jobs_for_server(
         obj = await response.text()
         if response.ok():
             try:
-                response_type = {"200": List[Job]}[response.status]
+                response_type = {"200": List["Job"]}[response.status]
                 if issubclass(response_type, BaseModel):
                     return parse_obj_as(response_type, obj)
                 else:
                     return response_type(obj)
             except KeyError:
-                raise RundeckError("Unknwon response code: {url}({response.status})")
+                raise RundeckError(f"Unknwon response code: {url}({response.status})")
         else:
             raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
 
@@ -245,7 +259,7 @@ async def system_scheduled_jobs_list(
                 else:
                     return response_type(obj)
             except KeyError:
-                raise RundeckError("Unknwon response code: {url}({response.status})")
+                raise RundeckError(f"Unknwon response code: {url}({response.status})")
         else:
             raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
 
@@ -267,7 +281,7 @@ async def system_acl_policy_list(
                 else:
                     return response_type(obj)
             except KeyError:
-                raise RundeckError("Unknwon response code: {url}({response.status})")
+                raise RundeckError(f"Unknwon response code: {url}({response.status})")
         else:
             raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
 
@@ -291,7 +305,7 @@ async def system_acl_policy_get(
                 else:
                     return response_type(obj)
             except KeyError:
-                raise RundeckError("Unknwon response code: {url}({response.status})")
+                raise RundeckError(f"Unknwon response code: {url}({response.status})")
         else:
             raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
 
@@ -326,7 +340,7 @@ async def system_acl_policy_create(
                 else:
                     return response_type(obj)
             except KeyError:
-                raise RundeckError("Unknwon response code: {url}({response.status})")
+                raise RundeckError(f"Unknwon response code: {url}({response.status})")
         else:
             raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
 
@@ -357,7 +371,7 @@ async def system_acl_policy_update(
                 else:
                     return response_type(obj)
             except KeyError:
-                raise RundeckError("Unknwon response code: {url}({response.status})")
+                raise RundeckError(f"Unknwon response code: {url}({response.status})")
         else:
             raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
 
@@ -381,6 +395,6 @@ async def system_acl_policy_delete(
                 else:
                     return response_type(obj)
             except KeyError:
-                raise RundeckError("Unknwon response code: {url}({response.status})")
+                raise RundeckError(f"Unknwon response code: {url}({response.status})")
         else:
             raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
