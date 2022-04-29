@@ -1,0 +1,23 @@
+paths:
+  /api/26/execution/{id}/input/files:
+    get:
+      summary: List input files for an execution
+      operationId: executionInputFilesList
+      tags:
+      - file
+      - execution
+      parameters:
+      - name: id
+        in: path
+        required: True
+        type: string
+      responses:
+        '200':
+          description: List of execution input files
+          schema: 
+            required:
+            - files
+            properties:
+              files:
+                type: array
+                items: {$ref: '#/definitions/JobInputFileInfo'}

@@ -1,0 +1,18 @@
+paths:
+  /api/26/job/{id}/executions:
+    get:
+      summary: List job executions
+      operationId: jobExecutionList
+      tags:
+      - job
+      - execution
+      parameters:
+      - name: id
+        in: path
+        required: True
+        description: Job ID
+        type: string
+      responses:
+        '200':
+          description: List of executions for job
+          schema: {$ref: '#/definitions/ExecutionList'}
