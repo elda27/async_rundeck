@@ -4,29 +4,36 @@ from enum import Enum
 from typing import List, Optional
 from pydantic import BaseModel, Field, parse_obj_as
 from async_rundeck.proto.json_types import Integer, Number, String, Boolean, Object
+import json
 from enum import Enum
 from typing import List, Optional, Union
-from pydantic import BaseModel, Field
+from pydantic import parse_raw_as, BaseModel, Field
 from async_rundeck.proto.json_types import Integer, Number, String, Boolean, Object
 from async_rundeck.client import RundeckClient
 from async_rundeck.exceptions import RundeckError, VersionError
 
 
-async def metric_list(session: RundeckClient, entrypoint: str, version: int) -> Object:
+async def metric_list(session: RundeckClient) -> Object:
     """List links to enabled Metrics endpoints"""
-    if version < 26:
-        raise VersionError(f"Insufficient api version error, Required >26")
-    url = entrypoint + "/api/{version}/metrics".format(version=version)
-    async with session.request("GET", url, data=dict(), params=dict()) as response:
+    if session.version < 26:
+        raise VersionError(
+            f"Insufficient api version error, Required >{session.version}"
+        )
+    url = session.format_url("/api/{version}/metrics", version=session.version)
+    async with session.request("GET", url, data=None, params=dict()) as response:
         obj = await response.text()
-        if response.ok():
+        if response.ok:
             try:
-                response_type = {"200": Object}[response.status]
-                if issubclass(response_type, BaseModel):
-                    return parse_obj_as(response_type, obj)
+                response_type = {(200): Object}[response.status]
+                if response_type is None:
+                    return None
                 else:
-                    return response_type(obj)
+                    return parse_raw_as(response_type, obj)
             except KeyError:
-                raise RundeckError(f"Unknwon response code: {url}({response.status})")
+                raise RundeckError(
+                    f"Unknwon response code: {session.url}({response.status})"
+                )
         else:
-            raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
+            raise RundeckError(
+                f"Connection diffused: {session.url}({response.status})\n{obj}"
+            )

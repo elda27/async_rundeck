@@ -4,9 +4,10 @@ from enum import Enum
 from typing import List, Optional
 from pydantic import BaseModel, Field, parse_obj_as
 from async_rundeck.proto.json_types import Integer, Number, String, Boolean, Object
+import json
 from enum import Enum
 from typing import List, Optional, Union
-from pydantic import BaseModel, Field
+from pydantic import parse_raw_as, BaseModel, Field
 from async_rundeck.proto.json_types import Integer, Number, String, Boolean, Object
 from async_rundeck.client import RundeckClient
 from async_rundeck.exceptions import RundeckError, VersionError
@@ -14,142 +15,170 @@ from async_rundeck.proto.definitions import StorageKeyListResponse, Object
 
 
 async def storage_key_get_material(
-    session: RundeckClient,
-    entrypoint: str,
-    version: int,
-    key_path: String,
-    accept: String,
+    session: RundeckClient, key_path: String, accept: String
 ) -> Union[Object, None]:
     """Get key material at the specified PATH"""
-    if version < 26:
-        raise VersionError(f"Insufficient api version error, Required >26")
-    url = entrypoint + "/api/{version}/storage/keys/{keyPath}".format(
-        version=version, key_path=key_path
+    if session.version < 26:
+        raise VersionError(
+            f"Insufficient api version error, Required >{session.version}"
+        )
+    url = session.format_url(
+        "/api/{version}/storage/keys/{keyPath}",
+        version=session.version,
+        keyPath=key_path,
     )
-    async with session.request("GET", url, data=dict(), params=dict()) as response:
+    async with session.request("GET", url, data=None, params=dict()) as response:
         obj = await response.text()
-        if response.ok():
+        if response.ok:
             try:
-                response_type = {"200": Object, "404": None}[response.status]
-                if issubclass(response_type, BaseModel):
-                    return parse_obj_as(response_type, obj)
+                response_type = {(200): Object, (404): None}[response.status]
+                if response_type is None:
+                    return None
                 else:
-                    return response_type(obj)
+                    return parse_raw_as(response_type, obj)
             except KeyError:
-                raise RundeckError(f"Unknwon response code: {url}({response.status})")
+                raise RundeckError(
+                    f"Unknwon response code: {session.url}({response.status})"
+                )
         else:
-            raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
+            raise RundeckError(
+                f"Connection diffused: {session.url}({response.status})\n{obj}"
+            )
 
 
 async def storage_key_get_metadata(
-    session: RundeckClient, entrypoint: str, version: int, path: String, accept: String
+    session: RundeckClient, path: String, accept: String
 ) -> Union[StorageKeyListResponse, None]:
     """List resources at the specified PATH"""
-    if version < 26:
-        raise VersionError(f"Insufficient api version error, Required >26")
-    url = entrypoint + "/api/{version}/storage/keys/{path}".format(
-        version=version, path=path
+    if session.version < 26:
+        raise VersionError(
+            f"Insufficient api version error, Required >{session.version}"
+        )
+    url = session.format_url(
+        "/api/{version}/storage/keys/{path}", version=session.version, path=path
     )
-    async with session.request("GET", url, data=dict(), params=dict()) as response:
+    async with session.request("GET", url, data=None, params=dict()) as response:
         obj = await response.text()
-        if response.ok():
+        if response.ok:
             try:
-                response_type = {"200": StorageKeyListResponse, "404": None}[
+                response_type = {(200): StorageKeyListResponse, (404): None}[
                     response.status
                 ]
-                if issubclass(response_type, BaseModel):
-                    return parse_obj_as(response_type, obj)
+                if response_type is None:
+                    return None
                 else:
-                    return response_type(obj)
+                    return parse_raw_as(response_type, obj)
             except KeyError:
-                raise RundeckError(f"Unknwon response code: {url}({response.status})")
+                raise RundeckError(
+                    f"Unknwon response code: {session.url}({response.status})"
+                )
         else:
-            raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
+            raise RundeckError(
+                f"Connection diffused: {session.url}({response.status})\n{obj}"
+            )
 
 
 async def storage_key_create(
     session: RundeckClient,
-    entrypoint: str,
-    version: int,
     path: String,
     file: Object,
     *,
     content_type: Optional[String] = "application/pgp-keys",
 ) -> Union[None, None]:
     """Set storage key contents"""
-    if version < 26:
-        raise VersionError(f"Insufficient api version error, Required >26")
-    url = entrypoint + "/api/{version}/storage/keys/{path}".format(
-        version=version, path=path
+    if session.version < 26:
+        raise VersionError(
+            f"Insufficient api version error, Required >{session.version}"
+        )
+    url = session.format_url(
+        "/api/{version}/storage/keys/{path}", version=session.version, path=path
     )
     async with session.request(
-        "POST", url, data=dict(**file.dict()), params=dict()
+        "POST",
+        url,
+        data=json.dumps(file) if isinstance(file, dict) else file.json(),
+        params=dict(),
     ) as response:
         obj = await response.text()
-        if response.ok():
+        if response.ok:
             try:
-                response_type = {"201": None, "409": None}[response.status]
-                if issubclass(response_type, BaseModel):
-                    return parse_obj_as(response_type, obj)
+                response_type = {(201): None, (409): None}[response.status]
+                if response_type is None:
+                    return None
                 else:
-                    return response_type(obj)
+                    return parse_raw_as(response_type, obj)
             except KeyError:
-                raise RundeckError(f"Unknwon response code: {url}({response.status})")
+                raise RundeckError(
+                    f"Unknwon response code: {session.url}({response.status})"
+                )
         else:
-            raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
+            raise RundeckError(
+                f"Connection diffused: {session.url}({response.status})\n{obj}"
+            )
 
 
 async def storage_key_update(
     session: RundeckClient,
-    entrypoint: str,
-    version: int,
     path: String,
     file: Object,
     *,
     content_type: Optional[String] = "application/pgp-keys",
 ) -> None:
     """Set storage key contents"""
-    if version < 26:
-        raise VersionError(f"Insufficient api version error, Required >26")
-    url = entrypoint + "/api/{version}/storage/keys/{path}".format(
-        version=version, path=path
+    if session.version < 26:
+        raise VersionError(
+            f"Insufficient api version error, Required >{session.version}"
+        )
+    url = session.format_url(
+        "/api/{version}/storage/keys/{path}", version=session.version, path=path
     )
     async with session.request(
-        "PUT", url, data=dict(**file.dict()), params=dict()
+        "PUT",
+        url,
+        data=json.dumps(file) if isinstance(file, dict) else file.json(),
+        params=dict(),
     ) as response:
         obj = await response.text()
-        if response.ok():
+        if response.ok:
             try:
-                response_type = {"200": None}[response.status]
-                if issubclass(response_type, BaseModel):
-                    return parse_obj_as(response_type, obj)
+                response_type = {(200): None}[response.status]
+                if response_type is None:
+                    return None
                 else:
-                    return response_type(obj)
+                    return parse_raw_as(response_type, obj)
             except KeyError:
-                raise RundeckError(f"Unknwon response code: {url}({response.status})")
+                raise RundeckError(
+                    f"Unknwon response code: {session.url}({response.status})"
+                )
         else:
-            raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
+            raise RundeckError(
+                f"Connection diffused: {session.url}({response.status})\n{obj}"
+            )
 
 
-async def storage_key_delete(
-    session: RundeckClient, entrypoint: str, version: int, path: String
-) -> None:
+async def storage_key_delete(session: RundeckClient, path: String) -> None:
     """Deletes the file if it exists and returns 204 response."""
-    if version < 26:
-        raise VersionError(f"Insufficient api version error, Required >26")
-    url = entrypoint + "/api/{version}/storage/keys/{path}".format(
-        version=version, path=path
+    if session.version < 26:
+        raise VersionError(
+            f"Insufficient api version error, Required >{session.version}"
+        )
+    url = session.format_url(
+        "/api/{version}/storage/keys/{path}", version=session.version, path=path
     )
-    async with session.request("DELETE", url, data=dict(), params=dict()) as response:
+    async with session.request("DELETE", url, data=None, params=dict()) as response:
         obj = await response.text()
-        if response.ok():
+        if response.ok:
             try:
-                response_type = {"204": None}[response.status]
-                if issubclass(response_type, BaseModel):
-                    return parse_obj_as(response_type, obj)
+                response_type = {(204): None}[response.status]
+                if response_type is None:
+                    return None
                 else:
-                    return response_type(obj)
+                    return parse_raw_as(response_type, obj)
             except KeyError:
-                raise RundeckError(f"Unknwon response code: {url}({response.status})")
+                raise RundeckError(
+                    f"Unknwon response code: {session.url}({response.status})"
+                )
         else:
-            raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
+            raise RundeckError(
+                f"Connection diffused: {session.url}({response.status})\n{obj}"
+            )

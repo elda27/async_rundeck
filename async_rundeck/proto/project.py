@@ -4,9 +4,10 @@ from enum import Enum
 from typing import List, Optional
 from pydantic import BaseModel, Field, parse_obj_as
 from async_rundeck.proto.json_types import Integer, Number, String, Boolean, Object
+import json
 from enum import Enum
 from typing import List, Optional, Union
-from pydantic import BaseModel, Field
+from pydantic import parse_raw_as, BaseModel, Field
 from async_rundeck.proto.json_types import Integer, Number, String, Boolean, Object
 from async_rundeck.client import RundeckClient
 from async_rundeck.exceptions import RundeckError, VersionError
@@ -48,240 +49,305 @@ class MotdUpdateRequest(BaseModel):
     contents: Optional[String] = Field(alias="contents")
 
 
-async def project_list(
-    session: RundeckClient, entrypoint: str, version: int
-) -> List[Object]:
+async def project_list(session: RundeckClient) -> List[Object]:
     """List projects"""
-    if version < 26:
-        raise VersionError(f"Insufficient api version error, Required >26")
-    url = entrypoint + "/api/{version}/projects".format(version=version)
-    async with session.request("GET", url, data=dict(), params=dict()) as response:
+    if session.version < 26:
+        raise VersionError(
+            f"Insufficient api version error, Required >{session.version}"
+        )
+    url = session.format_url("/api/{version}/projects", version=session.version)
+    async with session.request("GET", url, data=None, params=dict()) as response:
         obj = await response.text()
-        if response.ok():
+        if response.ok:
             try:
-                response_type = {"200": List[Object]}[response.status]
-                if issubclass(response_type, BaseModel):
-                    return parse_obj_as(response_type, obj)
+                response_type = {(200): List[Object]}[response.status]
+                if response_type is None:
+                    return None
                 else:
-                    return response_type(obj)
+                    return parse_raw_as(response_type, obj)
             except KeyError:
-                raise RundeckError(f"Unknwon response code: {url}({response.status})")
+                raise RundeckError(
+                    f"Unknwon response code: {session.url}({response.status})"
+                )
         else:
-            raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
+            raise RundeckError(
+                f"Connection diffused: {session.url}({response.status})\n{obj}"
+            )
 
 
 async def project_create(
-    session: RundeckClient,
-    entrypoint: str,
-    version: int,
-    project_create_request: ProjectCreateRequest,
+    session: RundeckClient, project_create_request: ProjectCreateRequest
 ) -> Union[Object, None]:
     """Create a new project"""
-    if version < 26:
-        raise VersionError(f"Insufficient api version error, Required >26")
-    url = entrypoint + "/api/{version}/projects".format(version=version)
+    if session.version < 26:
+        raise VersionError(
+            f"Insufficient api version error, Required >{session.version}"
+        )
+    url = session.format_url("/api/{version}/projects", version=session.version)
     async with session.request(
-        "POST", url, data=dict(**project_create_request.dict()), params=dict()
+        "POST",
+        url,
+        data=json.dumps(project_create_request)
+        if isinstance(project_create_request, dict)
+        else project_create_request.json(),
+        params=dict(),
     ) as response:
         obj = await response.text()
-        if response.ok():
+        if response.ok:
             try:
-                response_type = {"201": Object, "409": None}[response.status]
-                if issubclass(response_type, BaseModel):
-                    return parse_obj_as(response_type, obj)
+                response_type = {(201): Object, (409): None}[response.status]
+                if response_type is None:
+                    return None
                 else:
-                    return response_type(obj)
+                    return parse_raw_as(response_type, obj)
             except KeyError:
-                raise RundeckError(f"Unknwon response code: {url}({response.status})")
+                raise RundeckError(
+                    f"Unknwon response code: {session.url}({response.status})"
+                )
         else:
-            raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
+            raise RundeckError(
+                f"Connection diffused: {session.url}({response.status})\n{obj}"
+            )
 
 
-async def project_get(
-    session: RundeckClient, entrypoint: str, version: int, project: String
-) -> Union[Project, None]:
+async def project_get(session: RundeckClient, project: String) -> Union[Project, None]:
     """Get information about a project"""
-    if version < 26:
-        raise VersionError(f"Insufficient api version error, Required >26")
-    url = entrypoint + "/api/{version}/project/{project}".format(
-        version=version, project=project
+    if session.version < 26:
+        raise VersionError(
+            f"Insufficient api version error, Required >{session.version}"
+        )
+    url = session.format_url(
+        "/api/{version}/project/{project}", version=session.version, project=project
     )
-    async with session.request("GET", url, data=dict(), params=dict()) as response:
+    async with session.request("GET", url, data=None, params=dict()) as response:
         obj = await response.text()
-        if response.ok():
+        if response.ok:
             try:
-                response_type = {"200": Project, "404": None}[response.status]
-                if issubclass(response_type, BaseModel):
-                    return parse_obj_as(response_type, obj)
+                response_type = {(200): Project, (404): None}[response.status]
+                if response_type is None:
+                    return None
                 else:
-                    return response_type(obj)
+                    return parse_raw_as(response_type, obj)
             except KeyError:
-                raise RundeckError(f"Unknwon response code: {url}({response.status})")
+                raise RundeckError(
+                    f"Unknwon response code: {session.url}({response.status})"
+                )
         else:
-            raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
+            raise RundeckError(
+                f"Connection diffused: {session.url}({response.status})\n{obj}"
+            )
 
 
-async def project_delete(
-    session: RundeckClient, entrypoint: str, version: int, project: String
-) -> None:
+async def project_delete(session: RundeckClient, project: String) -> None:
     """Delete project"""
-    if version < 26:
-        raise VersionError(f"Insufficient api version error, Required >26")
-    url = entrypoint + "/api/{version}/project/{project}".format(
-        version=version, project=project
+    if session.version < 26:
+        raise VersionError(
+            f"Insufficient api version error, Required >{session.version}"
+        )
+    url = session.format_url(
+        "/api/{version}/project/{project}", version=session.version, project=project
     )
-    async with session.request("DELETE", url, data=dict(), params=dict()) as response:
+    async with session.request("DELETE", url, data=None, params=dict()) as response:
         obj = await response.text()
-        if response.ok():
+        if response.ok:
             try:
-                response_type = {"204": None}[response.status]
-                if issubclass(response_type, BaseModel):
-                    return parse_obj_as(response_type, obj)
+                response_type = {(204): None}[response.status]
+                if response_type is None:
+                    return None
                 else:
-                    return response_type(obj)
+                    return parse_raw_as(response_type, obj)
             except KeyError:
-                raise RundeckError(f"Unknwon response code: {url}({response.status})")
+                raise RundeckError(
+                    f"Unknwon response code: {session.url}({response.status})"
+                )
         else:
-            raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
+            raise RundeckError(
+                f"Connection diffused: {session.url}({response.status})\n{obj}"
+            )
 
 
 async def project_config_get(
-    session: RundeckClient, entrypoint: str, version: int, project: String
+    session: RundeckClient, project: String
 ) -> Union[Object, None]:
     """Get project config"""
-    if version < 26:
-        raise VersionError(f"Insufficient api version error, Required >26")
-    url = entrypoint + "/api/{version}/project/{project}/config".format(
-        version=version, project=project
+    if session.version < 26:
+        raise VersionError(
+            f"Insufficient api version error, Required >{session.version}"
+        )
+    url = session.format_url(
+        "/api/{version}/project/{project}/config",
+        version=session.version,
+        project=project,
     )
-    async with session.request("GET", url, data=dict(), params=dict()) as response:
+    async with session.request("GET", url, data=None, params=dict()) as response:
         obj = await response.text()
-        if response.ok():
+        if response.ok:
             try:
-                response_type = {"200": Object, "404": None}[response.status]
-                if issubclass(response_type, BaseModel):
-                    return parse_obj_as(response_type, obj)
+                response_type = {(200): Object, (404): None}[response.status]
+                if response_type is None:
+                    return None
                 else:
-                    return response_type(obj)
+                    return parse_raw_as(response_type, obj)
             except KeyError:
-                raise RundeckError(f"Unknwon response code: {url}({response.status})")
+                raise RundeckError(
+                    f"Unknwon response code: {session.url}({response.status})"
+                )
         else:
-            raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
+            raise RundeckError(
+                f"Connection diffused: {session.url}({response.status})\n{obj}"
+            )
 
 
 async def project_config_update(
-    session: RundeckClient,
-    entrypoint: str,
-    version: int,
-    project: String,
-    project_config_update_request: Object,
+    session: RundeckClient, project: String, project_config_update_request: Object
 ) -> None:
     """Update project config"""
-    if version < 26:
-        raise VersionError(f"Insufficient api version error, Required >26")
-    url = entrypoint + "/api/{version}/project/{project}/config".format(
-        version=version, project=project
+    if session.version < 26:
+        raise VersionError(
+            f"Insufficient api version error, Required >{session.version}"
+        )
+    url = session.format_url(
+        "/api/{version}/project/{project}/config",
+        version=session.version,
+        project=project,
     )
     async with session.request(
-        "PUT", url, data=dict(**project_config_update_request.dict()), params=dict()
+        "PUT",
+        url,
+        data=json.dumps(project_config_update_request)
+        if isinstance(project_config_update_request, dict)
+        else project_config_update_request.json(),
+        params=dict(),
     ) as response:
         obj = await response.text()
-        if response.ok():
+        if response.ok:
             try:
-                response_type = {"200": None}[response.status]
-                if issubclass(response_type, BaseModel):
-                    return parse_obj_as(response_type, obj)
+                response_type = {(200): None}[response.status]
+                if response_type is None:
+                    return None
                 else:
-                    return response_type(obj)
+                    return parse_raw_as(response_type, obj)
             except KeyError:
-                raise RundeckError(f"Unknwon response code: {url}({response.status})")
+                raise RundeckError(
+                    f"Unknwon response code: {session.url}({response.status})"
+                )
         else:
-            raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
+            raise RundeckError(
+                f"Connection diffused: {session.url}({response.status})\n{obj}"
+            )
 
 
 async def project_config_key_get(
-    session: RundeckClient, entrypoint: str, version: int, project: String, key: String
+    session: RundeckClient, project: String, key: String
 ) -> ProjectConfigKeyGetResponse:
     """Get project config key"""
-    if version < 26:
-        raise VersionError(f"Insufficient api version error, Required >26")
-    url = entrypoint + "/api/{version}/project/{project}/config/{key}".format(
-        version=version, project=project, key=key
+    if session.version < 26:
+        raise VersionError(
+            f"Insufficient api version error, Required >{session.version}"
+        )
+    url = session.format_url(
+        "/api/{version}/project/{project}/config/{key}",
+        version=session.version,
+        project=project,
+        key=key,
     )
-    async with session.request("GET", url, data=dict(), params=dict()) as response:
+    async with session.request("GET", url, data=None, params=dict()) as response:
         obj = await response.text()
-        if response.ok():
+        if response.ok:
             try:
-                response_type = {"200": ProjectConfigKeyGetResponse}[response.status]
-                if issubclass(response_type, BaseModel):
-                    return parse_obj_as(response_type, obj)
+                response_type = {(200): ProjectConfigKeyGetResponse}[response.status]
+                if response_type is None:
+                    return None
                 else:
-                    return response_type(obj)
+                    return parse_raw_as(response_type, obj)
             except KeyError:
-                raise RundeckError(f"Unknwon response code: {url}({response.status})")
+                raise RundeckError(
+                    f"Unknwon response code: {session.url}({response.status})"
+                )
         else:
-            raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
+            raise RundeckError(
+                f"Connection diffused: {session.url}({response.status})\n{obj}"
+            )
 
 
 async def project_config_key_set(
     session: RundeckClient,
-    entrypoint: str,
-    version: int,
     project: String,
     key: String,
     project_config_key_set_request: ProjectConfigKeySetRequest,
 ) -> ProjectConfigKeySetResponse:
     """Get project config key"""
-    if version < 26:
-        raise VersionError(f"Insufficient api version error, Required >26")
-    url = entrypoint + "/api/{version}/project/{project}/config/{key}".format(
-        version=version, project=project, key=key
+    if session.version < 26:
+        raise VersionError(
+            f"Insufficient api version error, Required >{session.version}"
+        )
+    url = session.format_url(
+        "/api/{version}/project/{project}/config/{key}",
+        version=session.version,
+        project=project,
+        key=key,
     )
     async with session.request(
-        "PUT", url, data=dict(**project_config_key_set_request.dict()), params=dict()
+        "PUT",
+        url,
+        data=json.dumps(project_config_key_set_request)
+        if isinstance(project_config_key_set_request, dict)
+        else project_config_key_set_request.json(),
+        params=dict(),
     ) as response:
         obj = await response.text()
-        if response.ok():
+        if response.ok:
             try:
-                response_type = {"200": ProjectConfigKeySetResponse}[response.status]
-                if issubclass(response_type, BaseModel):
-                    return parse_obj_as(response_type, obj)
+                response_type = {(200): ProjectConfigKeySetResponse}[response.status]
+                if response_type is None:
+                    return None
                 else:
-                    return response_type(obj)
+                    return parse_raw_as(response_type, obj)
             except KeyError:
-                raise RundeckError(f"Unknwon response code: {url}({response.status})")
+                raise RundeckError(
+                    f"Unknwon response code: {session.url}({response.status})"
+                )
         else:
-            raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
+            raise RundeckError(
+                f"Connection diffused: {session.url}({response.status})\n{obj}"
+            )
 
 
 async def project_config_key_delete(
-    session: RundeckClient, entrypoint: str, version: int, project: String, key: String
+    session: RundeckClient, project: String, key: String
 ) -> None:
     """Delete project config key"""
-    if version < 26:
-        raise VersionError(f"Insufficient api version error, Required >26")
-    url = entrypoint + "/api/{version}/project/{project}/config/{key}".format(
-        version=version, project=project, key=key
+    if session.version < 26:
+        raise VersionError(
+            f"Insufficient api version error, Required >{session.version}"
+        )
+    url = session.format_url(
+        "/api/{version}/project/{project}/config/{key}",
+        version=session.version,
+        project=project,
+        key=key,
     )
-    async with session.request("DELETE", url, data=dict(), params=dict()) as response:
+    async with session.request("DELETE", url, data=None, params=dict()) as response:
         obj = await response.text()
-        if response.ok():
+        if response.ok:
             try:
-                response_type = {"204": None}[response.status]
-                if issubclass(response_type, BaseModel):
-                    return parse_obj_as(response_type, obj)
+                response_type = {(204): None}[response.status]
+                if response_type is None:
+                    return None
                 else:
-                    return response_type(obj)
+                    return parse_raw_as(response_type, obj)
             except KeyError:
-                raise RundeckError(f"Unknwon response code: {url}({response.status})")
+                raise RundeckError(
+                    f"Unknwon response code: {session.url}({response.status})"
+                )
         else:
-            raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
+            raise RundeckError(
+                f"Connection diffused: {session.url}({response.status})\n{obj}"
+            )
 
 
 async def project_jobs_export(
     session: RundeckClient,
-    entrypoint: str,
-    version: int,
     project: String,
     *,
     format: Optional[String] = "xml",
@@ -290,37 +356,43 @@ async def project_jobs_export(
     job_filter: Optional[String] = None,
 ) -> String:
     """Export the job definitions in XML or YAML formats."""
-    if version < 26:
-        raise VersionError(f"Insufficient api version error, Required >26")
-    url = entrypoint + "/api/{version}/project/{project}/jobs/export".format(
-        version=version, project=project
+    if session.version < 26:
+        raise VersionError(
+            f"Insufficient api version error, Required >{session.version}"
+        )
+    url = session.format_url(
+        "/api/{version}/project/{project}/jobs/export",
+        version=session.version,
+        project=project,
     )
     async with session.request(
         "GET",
         url,
-        data=dict(),
+        data=None,
         params=dict(
             format=format, idlist=idlist, group_path=group_path, job_filter=job_filter
         ),
     ) as response:
         obj = await response.text()
-        if response.ok():
+        if response.ok:
             try:
-                response_type = {"200": String}[response.status]
-                if issubclass(response_type, BaseModel):
-                    return parse_obj_as(response_type, obj)
+                response_type = {(200): String}[response.status]
+                if response_type is None:
+                    return None
                 else:
-                    return response_type(obj)
+                    return parse_raw_as(response_type, obj)
             except KeyError:
-                raise RundeckError(f"Unknwon response code: {url}({response.status})")
+                raise RundeckError(
+                    f"Unknwon response code: {session.url}({response.status})"
+                )
         else:
-            raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
+            raise RundeckError(
+                f"Connection diffused: {session.url}({response.status})\n{obj}"
+            )
 
 
 async def project_jobs_import(
     session: RundeckClient,
-    entrypoint: str,
-    version: int,
     project: String,
     file: Object,
     *,
@@ -331,37 +403,43 @@ async def project_jobs_import(
     uuid_option: Optional[String] = "preserve",
 ) -> Object:
     """Import job definitions in XML or YAML formats."""
-    if version < 26:
-        raise VersionError(f"Insufficient api version error, Required >26")
-    url = entrypoint + "/api/{version}/project/{project}/jobs/import".format(
-        version=version, project=project
+    if session.version < 26:
+        raise VersionError(
+            f"Insufficient api version error, Required >{session.version}"
+        )
+    url = session.format_url(
+        "/api/{version}/project/{project}/jobs/import",
+        version=session.version,
+        project=project,
     )
     async with session.request(
         "POST",
         url,
-        data=dict(**file.dict()),
+        data=json.dumps(file) if isinstance(file, dict) else file.json(),
         params=dict(
             file_format=file_format, dupe_option=dupe_option, uuid_option=uuid_option
         ),
     ) as response:
         obj = await response.text()
-        if response.ok():
+        if response.ok:
             try:
-                response_type = {"200": Object}[response.status]
-                if issubclass(response_type, BaseModel):
-                    return parse_obj_as(response_type, obj)
+                response_type = {(200): Object}[response.status]
+                if response_type is None:
+                    return None
                 else:
-                    return response_type(obj)
+                    return parse_raw_as(response_type, obj)
             except KeyError:
-                raise RundeckError(f"Unknwon response code: {url}({response.status})")
+                raise RundeckError(
+                    f"Unknwon response code: {session.url}({response.status})"
+                )
         else:
-            raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
+            raise RundeckError(
+                f"Connection diffused: {session.url}({response.status})\n{obj}"
+            )
 
 
 async def project_archive_import(
     session: RundeckClient,
-    entrypoint: str,
-    version: int,
     project: String,
     file: Object,
     *,
@@ -371,15 +449,19 @@ async def project_archive_import(
     import_a_c_l: Optional[Boolean] = None,
 ) -> None:
     """Import project archive."""
-    if version < 26:
-        raise VersionError(f"Insufficient api version error, Required >26")
-    url = entrypoint + "/api/{version}/project/{project}/import".format(
-        version=version, project=project
+    if session.version < 26:
+        raise VersionError(
+            f"Insufficient api version error, Required >{session.version}"
+        )
+    url = session.format_url(
+        "/api/{version}/project/{project}/import",
+        version=session.version,
+        project=project,
     )
     async with session.request(
         "PUT",
         url,
-        data=dict(**file.dict()),
+        data=json.dumps(file) if isinstance(file, dict) else file.json(),
         params=dict(
             job_uuid_option=job_uuid_option,
             import_executions=import_executions,
@@ -388,23 +470,25 @@ async def project_archive_import(
         ),
     ) as response:
         obj = await response.text()
-        if response.ok():
+        if response.ok:
             try:
-                response_type = {"200": None}[response.status]
-                if issubclass(response_type, BaseModel):
-                    return parse_obj_as(response_type, obj)
+                response_type = {(200): None}[response.status]
+                if response_type is None:
+                    return None
                 else:
-                    return response_type(obj)
+                    return parse_raw_as(response_type, obj)
             except KeyError:
-                raise RundeckError(f"Unknwon response code: {url}({response.status})")
+                raise RundeckError(
+                    f"Unknwon response code: {session.url}({response.status})"
+                )
         else:
-            raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
+            raise RundeckError(
+                f"Connection diffused: {session.url}({response.status})\n{obj}"
+            )
 
 
 async def project_archive_export_sync(
     session: RundeckClient,
-    entrypoint: str,
-    version: int,
     project: String,
     *,
     execution_ids: Optional[Boolean] = None,
@@ -416,15 +500,19 @@ async def project_archive_export_sync(
     export_acls: Optional[Boolean] = None,
 ) -> Object:
     """Export archive of project synchronously"""
-    if version < 26:
-        raise VersionError(f"Insufficient api version error, Required >26")
-    url = entrypoint + "/api/{version}/project/{project}/export".format(
-        version=version, project=project
+    if session.version < 26:
+        raise VersionError(
+            f"Insufficient api version error, Required >{session.version}"
+        )
+    url = session.format_url(
+        "/api/{version}/project/{project}/export",
+        version=session.version,
+        project=project,
     )
     async with session.request(
         "GET",
         url,
-        data=dict(),
+        data=None,
         params=dict(
             execution_ids=execution_ids,
             export_all=export_all,
@@ -436,174 +524,224 @@ async def project_archive_export_sync(
         ),
     ) as response:
         obj = await response.text()
-        if response.ok():
+        if response.ok:
             try:
-                response_type = {"200": Object}[response.status]
-                if issubclass(response_type, BaseModel):
-                    return parse_obj_as(response_type, obj)
+                response_type = {(200): Object}[response.status]
+                if response_type is None:
+                    return None
                 else:
-                    return response_type(obj)
+                    return parse_raw_as(response_type, obj)
             except KeyError:
-                raise RundeckError(f"Unknwon response code: {url}({response.status})")
+                raise RundeckError(
+                    f"Unknwon response code: {session.url}({response.status})"
+                )
         else:
-            raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
+            raise RundeckError(
+                f"Connection diffused: {session.url}({response.status})\n{obj}"
+            )
 
 
 async def project_readme_get(
-    session: RundeckClient, entrypoint: str, version: int, project: String
+    session: RundeckClient, project: String
 ) -> Union[ProjectReadmeGetResponse, None]:
     """Get the readme.md contents"""
-    if version < 26:
-        raise VersionError(f"Insufficient api version error, Required >26")
-    url = entrypoint + "/api/{version}/project/{project}/readme.md".format(
-        version=version, project=project
+    if session.version < 26:
+        raise VersionError(
+            f"Insufficient api version error, Required >{session.version}"
+        )
+    url = session.format_url(
+        "/api/{version}/project/{project}/readme.md",
+        version=session.version,
+        project=project,
     )
-    async with session.request("GET", url, data=dict(), params=dict()) as response:
+    async with session.request("GET", url, data=None, params=dict()) as response:
         obj = await response.text()
-        if response.ok():
+        if response.ok:
             try:
-                response_type = {"200": ProjectReadmeGetResponse, "404": None}[
+                response_type = {(200): ProjectReadmeGetResponse, (404): None}[
                     response.status
                 ]
-                if issubclass(response_type, BaseModel):
-                    return parse_obj_as(response_type, obj)
+                if response_type is None:
+                    return None
                 else:
-                    return response_type(obj)
+                    return parse_raw_as(response_type, obj)
             except KeyError:
-                raise RundeckError(f"Unknwon response code: {url}({response.status})")
+                raise RundeckError(
+                    f"Unknwon response code: {session.url}({response.status})"
+                )
         else:
-            raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
+            raise RundeckError(
+                f"Connection diffused: {session.url}({response.status})\n{obj}"
+            )
 
 
 async def project_readme_put(
-    session: RundeckClient,
-    entrypoint: str,
-    version: int,
-    project: String,
-    readme_update_request: ReadmeUpdateRequest,
+    session: RundeckClient, project: String, readme_update_request: ReadmeUpdateRequest
 ) -> None:
     """Create or modify project README.md"""
-    if version < 26:
-        raise VersionError(f"Insufficient api version error, Required >26")
-    url = entrypoint + "/api/{version}/project/{project}/readme.md".format(
-        version=version, project=project
+    if session.version < 26:
+        raise VersionError(
+            f"Insufficient api version error, Required >{session.version}"
+        )
+    url = session.format_url(
+        "/api/{version}/project/{project}/readme.md",
+        version=session.version,
+        project=project,
     )
     async with session.request(
-        "PUT", url, data=dict(**readme_update_request.dict()), params=dict()
+        "PUT",
+        url,
+        data=json.dumps(readme_update_request)
+        if isinstance(readme_update_request, dict)
+        else readme_update_request.json(),
+        params=dict(),
     ) as response:
         obj = await response.text()
-        if response.ok():
+        if response.ok:
             try:
-                response_type = {"200": None}[response.status]
-                if issubclass(response_type, BaseModel):
-                    return parse_obj_as(response_type, obj)
+                response_type = {(200): None}[response.status]
+                if response_type is None:
+                    return None
                 else:
-                    return response_type(obj)
+                    return parse_raw_as(response_type, obj)
             except KeyError:
-                raise RundeckError(f"Unknwon response code: {url}({response.status})")
+                raise RundeckError(
+                    f"Unknwon response code: {session.url}({response.status})"
+                )
         else:
-            raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
+            raise RundeckError(
+                f"Connection diffused: {session.url}({response.status})\n{obj}"
+            )
 
 
-async def project_readme_delete(
-    session: RundeckClient, entrypoint: str, version: int, project: String
-) -> None:
+async def project_readme_delete(session: RundeckClient, project: String) -> None:
     """Delete project README.md"""
-    if version < 26:
-        raise VersionError(f"Insufficient api version error, Required >26")
-    url = entrypoint + "/api/{version}/project/{project}/readme.md".format(
-        version=version, project=project
+    if session.version < 26:
+        raise VersionError(
+            f"Insufficient api version error, Required >{session.version}"
+        )
+    url = session.format_url(
+        "/api/{version}/project/{project}/readme.md",
+        version=session.version,
+        project=project,
     )
-    async with session.request("DELETE", url, data=dict(), params=dict()) as response:
+    async with session.request("DELETE", url, data=None, params=dict()) as response:
         obj = await response.text()
-        if response.ok():
+        if response.ok:
             try:
-                response_type = {"204": None}[response.status]
-                if issubclass(response_type, BaseModel):
-                    return parse_obj_as(response_type, obj)
+                response_type = {(204): None}[response.status]
+                if response_type is None:
+                    return None
                 else:
-                    return response_type(obj)
+                    return parse_raw_as(response_type, obj)
             except KeyError:
-                raise RundeckError(f"Unknwon response code: {url}({response.status})")
+                raise RundeckError(
+                    f"Unknwon response code: {session.url}({response.status})"
+                )
         else:
-            raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
+            raise RundeckError(
+                f"Connection diffused: {session.url}({response.status})\n{obj}"
+            )
 
 
 async def project_motd_get(
-    session: RundeckClient, entrypoint: str, version: int, project: String
+    session: RundeckClient, project: String
 ) -> Union[ProjectMotdGetResponse, None]:
     """Get the readme.md contents"""
-    if version < 26:
-        raise VersionError(f"Insufficient api version error, Required >26")
-    url = entrypoint + "/api/{version}/project/{project}/motd.md".format(
-        version=version, project=project
+    if session.version < 26:
+        raise VersionError(
+            f"Insufficient api version error, Required >{session.version}"
+        )
+    url = session.format_url(
+        "/api/{version}/project/{project}/motd.md",
+        version=session.version,
+        project=project,
     )
-    async with session.request("GET", url, data=dict(), params=dict()) as response:
+    async with session.request("GET", url, data=None, params=dict()) as response:
         obj = await response.text()
-        if response.ok():
+        if response.ok:
             try:
-                response_type = {"200": ProjectMotdGetResponse, "404": None}[
+                response_type = {(200): ProjectMotdGetResponse, (404): None}[
                     response.status
                 ]
-                if issubclass(response_type, BaseModel):
-                    return parse_obj_as(response_type, obj)
+                if response_type is None:
+                    return None
                 else:
-                    return response_type(obj)
+                    return parse_raw_as(response_type, obj)
             except KeyError:
-                raise RundeckError(f"Unknwon response code: {url}({response.status})")
+                raise RundeckError(
+                    f"Unknwon response code: {session.url}({response.status})"
+                )
         else:
-            raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
+            raise RundeckError(
+                f"Connection diffused: {session.url}({response.status})\n{obj}"
+            )
 
 
 async def project_motd_put(
-    session: RundeckClient,
-    entrypoint: str,
-    version: int,
-    project: String,
-    motd_update_request: MotdUpdateRequest,
+    session: RundeckClient, project: String, motd_update_request: MotdUpdateRequest
 ) -> None:
     """Create or modify project MOTD.md"""
-    if version < 26:
-        raise VersionError(f"Insufficient api version error, Required >26")
-    url = entrypoint + "/api/{version}/project/{project}/motd.md".format(
-        version=version, project=project
+    if session.version < 26:
+        raise VersionError(
+            f"Insufficient api version error, Required >{session.version}"
+        )
+    url = session.format_url(
+        "/api/{version}/project/{project}/motd.md",
+        version=session.version,
+        project=project,
     )
     async with session.request(
-        "PUT", url, data=dict(**motd_update_request.dict()), params=dict()
+        "PUT",
+        url,
+        data=json.dumps(motd_update_request)
+        if isinstance(motd_update_request, dict)
+        else motd_update_request.json(),
+        params=dict(),
     ) as response:
         obj = await response.text()
-        if response.ok():
+        if response.ok:
             try:
-                response_type = {"200": None}[response.status]
-                if issubclass(response_type, BaseModel):
-                    return parse_obj_as(response_type, obj)
+                response_type = {(200): None}[response.status]
+                if response_type is None:
+                    return None
                 else:
-                    return response_type(obj)
+                    return parse_raw_as(response_type, obj)
             except KeyError:
-                raise RundeckError(f"Unknwon response code: {url}({response.status})")
+                raise RundeckError(
+                    f"Unknwon response code: {session.url}({response.status})"
+                )
         else:
-            raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
+            raise RundeckError(
+                f"Connection diffused: {session.url}({response.status})\n{obj}"
+            )
 
 
-async def project_motd_delete(
-    session: RundeckClient, entrypoint: str, version: int, project: String
-) -> None:
+async def project_motd_delete(session: RundeckClient, project: String) -> None:
     """Delete project motd.md"""
-    if version < 26:
-        raise VersionError(f"Insufficient api version error, Required >26")
-    url = entrypoint + "/api/{version}/project/{project}/motd.md".format(
-        version=version, project=project
+    if session.version < 26:
+        raise VersionError(
+            f"Insufficient api version error, Required >{session.version}"
+        )
+    url = session.format_url(
+        "/api/{version}/project/{project}/motd.md",
+        version=session.version,
+        project=project,
     )
-    async with session.request("DELETE", url, data=dict(), params=dict()) as response:
+    async with session.request("DELETE", url, data=None, params=dict()) as response:
         obj = await response.text()
-        if response.ok():
+        if response.ok:
             try:
-                response_type = {"204": None}[response.status]
-                if issubclass(response_type, BaseModel):
-                    return parse_obj_as(response_type, obj)
+                response_type = {(204): None}[response.status]
+                if response_type is None:
+                    return None
                 else:
-                    return response_type(obj)
+                    return parse_raw_as(response_type, obj)
             except KeyError:
-                raise RundeckError(f"Unknwon response code: {url}({response.status})")
+                raise RundeckError(
+                    f"Unknwon response code: {session.url}({response.status})"
+                )
         else:
-            raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
+            raise RundeckError(
+                f"Connection diffused: {session.url}({response.status})\n{obj}"
+            )

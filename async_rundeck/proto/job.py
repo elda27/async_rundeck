@@ -4,9 +4,10 @@ from enum import Enum
 from typing import List, Optional
 from pydantic import BaseModel, Field, parse_obj_as
 from async_rundeck.proto.json_types import Integer, Number, String, Boolean, Object
+import json
 from enum import Enum
 from typing import List, Optional, Union
-from pydantic import BaseModel, Field
+from pydantic import parse_raw_as, BaseModel, Field
 from async_rundeck.proto.json_types import Integer, Number, String, Boolean, Object
 from async_rundeck.client import RundeckClient
 from async_rundeck.exceptions import RundeckError, VersionError
@@ -70,8 +71,6 @@ class JobWorkflowGetResponse(BaseModel):
 
 async def job_list(
     session: RundeckClient,
-    entrypoint: str,
-    version: int,
     project: String,
     *,
     id_list: Optional[String] = None,
@@ -83,15 +82,19 @@ async def job_list(
     server_node_uuid_filter: Optional[String] = None,
 ) -> List["Job"]:
     """List the jobs that exist for a project"""
-    if version < 26:
-        raise VersionError(f"Insufficient api version error, Required >26")
-    url = entrypoint + "/api/{version}/project/{project}/jobs".format(
-        version=version, project=project
+    if session.version < 26:
+        raise VersionError(
+            f"Insufficient api version error, Required >{session.version}"
+        )
+    url = session.format_url(
+        "/api/{version}/project/{project}/jobs",
+        version=session.version,
+        project=project,
     )
     async with session.request(
         "GET",
         url,
-        data=dict(),
+        data=None,
         params=dict(
             id_list=id_list,
             group_path=group_path,
@@ -103,541 +106,673 @@ async def job_list(
         ),
     ) as response:
         obj = await response.text()
-        if response.ok():
+        if response.ok:
             try:
-                response_type = {"200": List["Job"]}[response.status]
-                if issubclass(response_type, BaseModel):
-                    return parse_obj_as(response_type, obj)
+                response_type = {(200): List["Job"]}[response.status]
+                if response_type is None:
+                    return None
                 else:
-                    return response_type(obj)
+                    return parse_raw_as(response_type, obj)
             except KeyError:
-                raise RundeckError(f"Unknwon response code: {url}({response.status})")
+                raise RundeckError(
+                    f"Unknwon response code: {session.url}({response.status})"
+                )
         else:
-            raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
+            raise RundeckError(
+                f"Connection diffused: {session.url}({response.status})\n{obj}"
+            )
 
 
-async def job_execution_list(
-    session: RundeckClient, entrypoint: str, version: int, id: String
-) -> ExecutionList:
+async def job_execution_list(session: RundeckClient, id: String) -> ExecutionList:
     """List job executions"""
-    if version < 26:
-        raise VersionError(f"Insufficient api version error, Required >26")
-    url = entrypoint + "/api/{version}/job/{id}/executions".format(
-        version=version, id=id
+    if session.version < 26:
+        raise VersionError(
+            f"Insufficient api version error, Required >{session.version}"
+        )
+    url = session.format_url(
+        "/api/{version}/job/{id}/executions", version=session.version, id=id
     )
-    async with session.request("GET", url, data=dict(), params=dict()) as response:
+    async with session.request("GET", url, data=None, params=dict()) as response:
         obj = await response.text()
-        if response.ok():
+        if response.ok:
             try:
-                response_type = {"200": ExecutionList}[response.status]
-                if issubclass(response_type, BaseModel):
-                    return parse_obj_as(response_type, obj)
+                response_type = {(200): ExecutionList}[response.status]
+                if response_type is None:
+                    return None
                 else:
-                    return response_type(obj)
+                    return parse_raw_as(response_type, obj)
             except KeyError:
-                raise RundeckError(f"Unknwon response code: {url}({response.status})")
+                raise RundeckError(
+                    f"Unknwon response code: {session.url}({response.status})"
+                )
         else:
-            raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
+            raise RundeckError(
+                f"Connection diffused: {session.url}({response.status})\n{obj}"
+            )
 
 
 async def job_execution_run(
-    session: RundeckClient,
-    entrypoint: str,
-    version: int,
-    id: String,
-    *,
-    request: Optional["ExecuteJobRequest"] = None,
+    session: RundeckClient, id: String, *, request: Optional["ExecuteJobRequest"] = None
 ) -> Execution:
     """Run the specified job"""
-    if version < 26:
-        raise VersionError(f"Insufficient api version error, Required >26")
-    url = entrypoint + "/api/{version}/job/{id}/executions".format(
-        version=version, id=id
+    if session.version < 26:
+        raise VersionError(
+            f"Insufficient api version error, Required >{session.version}"
+        )
+    url = session.format_url(
+        "/api/{version}/job/{id}/executions", version=session.version, id=id
     )
     async with session.request(
-        "POST", url, data=dict(**request.dict()), params=dict()
+        "POST",
+        url,
+        data=json.dumps(request) if isinstance(request, dict) else request.json(),
+        params=dict(),
     ) as response:
         obj = await response.text()
-        if response.ok():
+        if response.ok:
             try:
-                response_type = {"200": Execution}[response.status]
-                if issubclass(response_type, BaseModel):
-                    return parse_obj_as(response_type, obj)
+                response_type = {(200): Execution}[response.status]
+                if response_type is None:
+                    return None
                 else:
-                    return response_type(obj)
+                    return parse_raw_as(response_type, obj)
             except KeyError:
-                raise RundeckError(f"Unknwon response code: {url}({response.status})")
+                raise RundeckError(
+                    f"Unknwon response code: {session.url}({response.status})"
+                )
         else:
-            raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
+            raise RundeckError(
+                f"Connection diffused: {session.url}({response.status})\n{obj}"
+            )
 
 
 async def job_execution_delete(
-    session: RundeckClient, entrypoint: str, version: int, id: Integer
+    session: RundeckClient, id: Integer
 ) -> JobExecutionDelete:
     """Delete all job executions"""
-    if version < 26:
-        raise VersionError(f"Insufficient api version error, Required >26")
-    url = entrypoint + "/api/{version}/job/{id}/executions".format(
-        version=version, id=id
+    if session.version < 26:
+        raise VersionError(
+            f"Insufficient api version error, Required >{session.version}"
+        )
+    url = session.format_url(
+        "/api/{version}/job/{id}/executions", version=session.version, id=id
     )
-    async with session.request("DELETE", url, data=dict(), params=dict()) as response:
+    async with session.request("DELETE", url, data=None, params=dict()) as response:
         obj = await response.text()
-        if response.ok():
+        if response.ok:
             try:
-                response_type = {"204": JobExecutionDelete}[response.status]
-                if issubclass(response_type, BaseModel):
-                    return parse_obj_as(response_type, obj)
+                response_type = {(204): JobExecutionDelete}[response.status]
+                if response_type is None:
+                    return None
                 else:
-                    return response_type(obj)
+                    return parse_raw_as(response_type, obj)
             except KeyError:
-                raise RundeckError(f"Unknwon response code: {url}({response.status})")
+                raise RundeckError(
+                    f"Unknwon response code: {session.url}({response.status})"
+                )
         else:
-            raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
+            raise RundeckError(
+                f"Connection diffused: {session.url}({response.status})\n{obj}"
+            )
 
 
 async def job_retry_execution(
     session: RundeckClient,
-    entrypoint: str,
-    version: int,
-    job_i_d: String,
-    execution_i_d: Integer,
+    job_id: String,
+    execution_id: Integer,
     *,
     request: Optional["RetryExecutionRequest"] = None,
 ) -> ExecutionList:
     """Retry a failed job execution on failed nodes only or on the same as the execution. This is the same functionality as the `Retry Failed Nodes ...` button on the execution page."""
-    if version < 26:
-        raise VersionError(f"Insufficient api version error, Required >26")
-    url = entrypoint + "/api/{version}/job/{jobID}/retry/{executionID}".format(
-        version=version, job_i_d=job_i_d, execution_i_d=execution_i_d
+    if session.version < 26:
+        raise VersionError(
+            f"Insufficient api version error, Required >{session.version}"
+        )
+    url = session.format_url(
+        "/api/{version}/job/{jobID}/retry/{executionID}",
+        version=session.version,
+        jobID=job_id,
+        executionID=execution_id,
     )
     async with session.request(
-        "POST", url, data=dict(**request.dict()), params=dict()
+        "POST",
+        url,
+        data=json.dumps(request) if isinstance(request, dict) else request.json(),
+        params=dict(),
     ) as response:
         obj = await response.text()
-        if response.ok():
+        if response.ok:
             try:
-                response_type = {"200": ExecutionList}[response.status]
-                if issubclass(response_type, BaseModel):
-                    return parse_obj_as(response_type, obj)
+                response_type = {(200): ExecutionList}[response.status]
+                if response_type is None:
+                    return None
                 else:
-                    return response_type(obj)
+                    return parse_raw_as(response_type, obj)
             except KeyError:
-                raise RundeckError(f"Unknwon response code: {url}({response.status})")
+                raise RundeckError(
+                    f"Unknwon response code: {session.url}({response.status})"
+                )
         else:
-            raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
+            raise RundeckError(
+                f"Connection diffused: {session.url}({response.status})\n{obj}"
+            )
 
 
 async def job_get(
-    session: RundeckClient,
-    entrypoint: str,
-    version: int,
-    id: String,
-    *,
-    format: Optional[String] = "xml",
+    session: RundeckClient, id: String, *, format: Optional[String] = "xml"
 ) -> Union[Object, None]:
     """Export a single job definition in XML or YAML formats."""
-    if version < 26:
-        raise VersionError(f"Insufficient api version error, Required >26")
-    url = entrypoint + "/api/{version}/job/{id}".format(version=version, id=id)
+    if session.version < 26:
+        raise VersionError(
+            f"Insufficient api version error, Required >{session.version}"
+        )
+    url = session.format_url("/api/{version}/job/{id}", version=session.version, id=id)
     async with session.request(
-        "GET", url, data=dict(), params=dict(format=format)
+        "GET", url, data=None, params=dict(format=format)
     ) as response:
         obj = await response.text()
-        if response.ok():
+        if response.ok:
             try:
-                response_type = {"200": Object, "404": None}[response.status]
-                if issubclass(response_type, BaseModel):
-                    return parse_obj_as(response_type, obj)
+                response_type = {(200): Object, (404): None}[response.status]
+                if response_type is None:
+                    return None
                 else:
-                    return response_type(obj)
+                    return parse_raw_as(response_type, obj)
             except KeyError:
-                raise RundeckError(f"Unknwon response code: {url}({response.status})")
+                raise RundeckError(
+                    f"Unknwon response code: {session.url}({response.status})"
+                )
         else:
-            raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
+            raise RundeckError(
+                f"Connection diffused: {session.url}({response.status})\n{obj}"
+            )
 
 
-async def job_delete(
-    session: RundeckClient, entrypoint: str, version: int, id: String
-) -> Union[None, None]:
+async def job_delete(session: RundeckClient, id: String) -> Union[None, None]:
     """Delete a single job definition."""
-    if version < 26:
-        raise VersionError(f"Insufficient api version error, Required >26")
-    url = entrypoint + "/api/{version}/job/{id}".format(version=version, id=id)
-    async with session.request("DELETE", url, data=dict(), params=dict()) as response:
+    if session.version < 26:
+        raise VersionError(
+            f"Insufficient api version error, Required >{session.version}"
+        )
+    url = session.format_url("/api/{version}/job/{id}", version=session.version, id=id)
+    async with session.request("DELETE", url, data=None, params=dict()) as response:
         obj = await response.text()
-        if response.ok():
+        if response.ok:
             try:
-                response_type = {"204": None, "404": None}[response.status]
-                if issubclass(response_type, BaseModel):
-                    return parse_obj_as(response_type, obj)
+                response_type = {(204): None, (404): None}[response.status]
+                if response_type is None:
+                    return None
                 else:
-                    return response_type(obj)
+                    return parse_raw_as(response_type, obj)
             except KeyError:
-                raise RundeckError(f"Unknwon response code: {url}({response.status})")
+                raise RundeckError(
+                    f"Unknwon response code: {session.url}({response.status})"
+                )
         else:
-            raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
+            raise RundeckError(
+                f"Connection diffused: {session.url}({response.status})\n{obj}"
+            )
 
 
-async def job_info_get(
-    session: RundeckClient, entrypoint: str, version: int, id: String
-) -> JobMetadata:
+async def job_info_get(session: RundeckClient, id: String) -> JobMetadata:
     """Get metadata about a specific job."""
-    if version < 26:
-        raise VersionError(f"Insufficient api version error, Required >26")
-    url = entrypoint + "/api/{version}/job/{id}/info".format(version=version, id=id)
-    async with session.request("GET", url, data=dict(), params=dict()) as response:
+    if session.version < 26:
+        raise VersionError(
+            f"Insufficient api version error, Required >{session.version}"
+        )
+    url = session.format_url(
+        "/api/{version}/job/{id}/info", version=session.version, id=id
+    )
+    async with session.request("GET", url, data=None, params=dict()) as response:
         obj = await response.text()
-        if response.ok():
+        if response.ok:
             try:
-                response_type = {"200": JobMetadata}[response.status]
-                if issubclass(response_type, BaseModel):
-                    return parse_obj_as(response_type, obj)
+                response_type = {(200): JobMetadata}[response.status]
+                if response_type is None:
+                    return None
                 else:
-                    return response_type(obj)
+                    return parse_raw_as(response_type, obj)
             except KeyError:
-                raise RundeckError(f"Unknwon response code: {url}({response.status})")
+                raise RundeckError(
+                    f"Unknwon response code: {session.url}({response.status})"
+                )
         else:
-            raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
+            raise RundeckError(
+                f"Connection diffused: {session.url}({response.status})\n{obj}"
+            )
 
 
 async def job_bulk_delete(
-    session: RundeckClient,
-    entrypoint: str,
-    version: int,
-    job_bulk_delete_request: JobBulkDeleteRequest,
+    session: RundeckClient, job_bulk_delete_request: JobBulkDeleteRequest
 ) -> JobBulkOperationResponse:
     """Delete multiple job definitions at once"""
-    if version < 26:
-        raise VersionError(f"Insufficient api version error, Required >26")
-    url = entrypoint + "/api/{version}/jobs/delete".format(version=version)
+    if session.version < 26:
+        raise VersionError(
+            f"Insufficient api version error, Required >{session.version}"
+        )
+    url = session.format_url("/api/{version}/jobs/delete", version=session.version)
     async with session.request(
-        "POST", url, data=dict(**job_bulk_delete_request.dict()), params=dict()
+        "POST",
+        url,
+        data=json.dumps(job_bulk_delete_request)
+        if isinstance(job_bulk_delete_request, dict)
+        else job_bulk_delete_request.json(),
+        params=dict(),
     ) as response:
         obj = await response.text()
-        if response.ok():
+        if response.ok:
             try:
-                response_type = {"200": JobBulkOperationResponse}[response.status]
-                if issubclass(response_type, BaseModel):
-                    return parse_obj_as(response_type, obj)
+                response_type = {(200): JobBulkOperationResponse}[response.status]
+                if response_type is None:
+                    return None
                 else:
-                    return response_type(obj)
+                    return parse_raw_as(response_type, obj)
             except KeyError:
-                raise RundeckError(f"Unknwon response code: {url}({response.status})")
+                raise RundeckError(
+                    f"Unknwon response code: {session.url}({response.status})"
+                )
         else:
-            raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
+            raise RundeckError(
+                f"Connection diffused: {session.url}({response.status})\n{obj}"
+            )
 
 
 async def job_execution_enable(
-    session: RundeckClient, entrypoint: str, version: int, id: String
+    session: RundeckClient, id: String
 ) -> JobExecutionEnableResponse:
     """Enable executions for a job. (ACL requires toggle_execution action for a job.)"""
-    if version < 26:
-        raise VersionError(f"Insufficient api version error, Required >26")
-    url = entrypoint + "/api/{version}/job/{id}/execution/enable".format(
-        version=version, id=id
+    if session.version < 26:
+        raise VersionError(
+            f"Insufficient api version error, Required >{session.version}"
+        )
+    url = session.format_url(
+        "/api/{version}/job/{id}/execution/enable", version=session.version, id=id
     )
-    async with session.request("POST", url, data=dict(), params=dict()) as response:
+    async with session.request("POST", url, data=None, params=dict()) as response:
         obj = await response.text()
-        if response.ok():
+        if response.ok:
             try:
-                response_type = {"200": JobExecutionEnableResponse}[response.status]
-                if issubclass(response_type, BaseModel):
-                    return parse_obj_as(response_type, obj)
+                response_type = {(200): JobExecutionEnableResponse}[response.status]
+                if response_type is None:
+                    return None
                 else:
-                    return response_type(obj)
+                    return parse_raw_as(response_type, obj)
             except KeyError:
-                raise RundeckError(f"Unknwon response code: {url}({response.status})")
+                raise RundeckError(
+                    f"Unknwon response code: {session.url}({response.status})"
+                )
         else:
-            raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
+            raise RundeckError(
+                f"Connection diffused: {session.url}({response.status})\n{obj}"
+            )
 
 
 async def job_execution_disable(
-    session: RundeckClient, entrypoint: str, version: int, id: String
+    session: RundeckClient, id: String
 ) -> JobExecutionDisableResponse:
     """Disable all executions for a job (scheduled or manual). (ACL requires toggle_execution action for a job.)"""
-    if version < 26:
-        raise VersionError(f"Insufficient api version error, Required >26")
-    url = entrypoint + "/api/{version}/job/{id}/execution/disable".format(
-        version=version, id=id
+    if session.version < 26:
+        raise VersionError(
+            f"Insufficient api version error, Required >{session.version}"
+        )
+    url = session.format_url(
+        "/api/{version}/job/{id}/execution/disable", version=session.version, id=id
     )
-    async with session.request("POST", url, data=dict(), params=dict()) as response:
+    async with session.request("POST", url, data=None, params=dict()) as response:
         obj = await response.text()
-        if response.ok():
+        if response.ok:
             try:
-                response_type = {"200": JobExecutionDisableResponse}[response.status]
-                if issubclass(response_type, BaseModel):
-                    return parse_obj_as(response_type, obj)
+                response_type = {(200): JobExecutionDisableResponse}[response.status]
+                if response_type is None:
+                    return None
                 else:
-                    return response_type(obj)
+                    return parse_raw_as(response_type, obj)
             except KeyError:
-                raise RundeckError(f"Unknwon response code: {url}({response.status})")
+                raise RundeckError(
+                    f"Unknwon response code: {session.url}({response.status})"
+                )
         else:
-            raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
+            raise RundeckError(
+                f"Connection diffused: {session.url}({response.status})\n{obj}"
+            )
 
 
 async def job_schedule_enable(
-    session: RundeckClient, entrypoint: str, version: int, id: String
+    session: RundeckClient, id: String
 ) -> JobScheduleEnableResponse:
     """Enable the schedule for a job. (ACL requires toggle_schedule action for a job.)"""
-    if version < 26:
-        raise VersionError(f"Insufficient api version error, Required >26")
-    url = entrypoint + "/api/{version}/job/{id}/schedule/enable".format(
-        version=version, id=id
+    if session.version < 26:
+        raise VersionError(
+            f"Insufficient api version error, Required >{session.version}"
+        )
+    url = session.format_url(
+        "/api/{version}/job/{id}/schedule/enable", version=session.version, id=id
     )
-    async with session.request("POST", url, data=dict(), params=dict()) as response:
+    async with session.request("POST", url, data=None, params=dict()) as response:
         obj = await response.text()
-        if response.ok():
+        if response.ok:
             try:
-                response_type = {"200": JobScheduleEnableResponse}[response.status]
-                if issubclass(response_type, BaseModel):
-                    return parse_obj_as(response_type, obj)
+                response_type = {(200): JobScheduleEnableResponse}[response.status]
+                if response_type is None:
+                    return None
                 else:
-                    return response_type(obj)
+                    return parse_raw_as(response_type, obj)
             except KeyError:
-                raise RundeckError(f"Unknwon response code: {url}({response.status})")
+                raise RundeckError(
+                    f"Unknwon response code: {session.url}({response.status})"
+                )
         else:
-            raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
+            raise RundeckError(
+                f"Connection diffused: {session.url}({response.status})\n{obj}"
+            )
 
 
 async def job_schedule_disable(
-    session: RundeckClient, entrypoint: str, version: int, id: String
+    session: RundeckClient, id: String
 ) -> JobScheduleDisableResponse:
     """Disable the schedule for a job. (ACL requires toggle_schedule action for a job.)"""
-    if version < 26:
-        raise VersionError(f"Insufficient api version error, Required >26")
-    url = entrypoint + "/api/{version}/job/{id}/schedule/disable".format(
-        version=version, id=id
+    if session.version < 26:
+        raise VersionError(
+            f"Insufficient api version error, Required >{session.version}"
+        )
+    url = session.format_url(
+        "/api/{version}/job/{id}/schedule/disable", version=session.version, id=id
     )
-    async with session.request("POST", url, data=dict(), params=dict()) as response:
+    async with session.request("POST", url, data=None, params=dict()) as response:
         obj = await response.text()
-        if response.ok():
+        if response.ok:
             try:
-                response_type = {"200": JobScheduleDisableResponse}[response.status]
-                if issubclass(response_type, BaseModel):
-                    return parse_obj_as(response_type, obj)
+                response_type = {(200): JobScheduleDisableResponse}[response.status]
+                if response_type is None:
+                    return None
                 else:
-                    return response_type(obj)
+                    return parse_raw_as(response_type, obj)
             except KeyError:
-                raise RundeckError(f"Unknwon response code: {url}({response.status})")
+                raise RundeckError(
+                    f"Unknwon response code: {session.url}({response.status})"
+                )
         else:
-            raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
+            raise RundeckError(
+                f"Connection diffused: {session.url}({response.status})\n{obj}"
+            )
 
 
 async def job_execution_bulk_enable(
     session: RundeckClient,
-    entrypoint: str,
-    version: int,
     job_execution_bulk_enable_request: JobExecutionBulkEnableRequest,
 ) -> JobBulkOperationResponse:
     """Bulk enable job executions"""
-    if version < 26:
-        raise VersionError(f"Insufficient api version error, Required >26")
-    url = entrypoint + "/api/{version}/jobs/execution/enable".format(version=version)
+    if session.version < 26:
+        raise VersionError(
+            f"Insufficient api version error, Required >{session.version}"
+        )
+    url = session.format_url(
+        "/api/{version}/jobs/execution/enable", version=session.version
+    )
     async with session.request(
         "POST",
         url,
-        data=dict(**job_execution_bulk_enable_request.dict()),
+        data=json.dumps(job_execution_bulk_enable_request)
+        if isinstance(job_execution_bulk_enable_request, dict)
+        else job_execution_bulk_enable_request.json(),
         params=dict(),
     ) as response:
         obj = await response.text()
-        if response.ok():
+        if response.ok:
             try:
-                response_type = {"200": JobBulkOperationResponse}[response.status]
-                if issubclass(response_type, BaseModel):
-                    return parse_obj_as(response_type, obj)
+                response_type = {(200): JobBulkOperationResponse}[response.status]
+                if response_type is None:
+                    return None
                 else:
-                    return response_type(obj)
+                    return parse_raw_as(response_type, obj)
             except KeyError:
-                raise RundeckError(f"Unknwon response code: {url}({response.status})")
+                raise RundeckError(
+                    f"Unknwon response code: {session.url}({response.status})"
+                )
         else:
-            raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
+            raise RundeckError(
+                f"Connection diffused: {session.url}({response.status})\n{obj}"
+            )
 
 
 async def job_execution_bulk_disable(
     session: RundeckClient,
-    entrypoint: str,
-    version: int,
     job_execution_bulk_disable_request: JobExecutionBulkDisableRequest,
 ) -> JobBulkOperationResponse:
     """Bulk disable job executions"""
-    if version < 26:
-        raise VersionError(f"Insufficient api version error, Required >26")
-    url = entrypoint + "/api/{version}/jobs/execution/disable".format(version=version)
+    if session.version < 26:
+        raise VersionError(
+            f"Insufficient api version error, Required >{session.version}"
+        )
+    url = session.format_url(
+        "/api/{version}/jobs/execution/disable", version=session.version
+    )
     async with session.request(
         "POST",
         url,
-        data=dict(**job_execution_bulk_disable_request.dict()),
+        data=json.dumps(job_execution_bulk_disable_request)
+        if isinstance(job_execution_bulk_disable_request, dict)
+        else job_execution_bulk_disable_request.json(),
         params=dict(),
     ) as response:
         obj = await response.text()
-        if response.ok():
+        if response.ok:
             try:
-                response_type = {"200": JobBulkOperationResponse}[response.status]
-                if issubclass(response_type, BaseModel):
-                    return parse_obj_as(response_type, obj)
+                response_type = {(200): JobBulkOperationResponse}[response.status]
+                if response_type is None:
+                    return None
                 else:
-                    return response_type(obj)
+                    return parse_raw_as(response_type, obj)
             except KeyError:
-                raise RundeckError(f"Unknwon response code: {url}({response.status})")
+                raise RundeckError(
+                    f"Unknwon response code: {session.url}({response.status})"
+                )
         else:
-            raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
+            raise RundeckError(
+                f"Connection diffused: {session.url}({response.status})\n{obj}"
+            )
 
 
 async def job_schedule_bulk_enable(
     session: RundeckClient,
-    entrypoint: str,
-    version: int,
     job_schedule_bulk_enable_request: JobScheduleBulkEnableRequest,
 ) -> JobBulkOperationResponse:
     """Bulk enable job schedule"""
-    if version < 26:
-        raise VersionError(f"Insufficient api version error, Required >26")
-    url = entrypoint + "/api/{version}/jobs/schedule/enable".format(version=version)
+    if session.version < 26:
+        raise VersionError(
+            f"Insufficient api version error, Required >{session.version}"
+        )
+    url = session.format_url(
+        "/api/{version}/jobs/schedule/enable", version=session.version
+    )
     async with session.request(
-        "POST", url, data=dict(**job_schedule_bulk_enable_request.dict()), params=dict()
+        "POST",
+        url,
+        data=json.dumps(job_schedule_bulk_enable_request)
+        if isinstance(job_schedule_bulk_enable_request, dict)
+        else job_schedule_bulk_enable_request.json(),
+        params=dict(),
     ) as response:
         obj = await response.text()
-        if response.ok():
+        if response.ok:
             try:
-                response_type = {"200": JobBulkOperationResponse}[response.status]
-                if issubclass(response_type, BaseModel):
-                    return parse_obj_as(response_type, obj)
+                response_type = {(200): JobBulkOperationResponse}[response.status]
+                if response_type is None:
+                    return None
                 else:
-                    return response_type(obj)
+                    return parse_raw_as(response_type, obj)
             except KeyError:
-                raise RundeckError(f"Unknwon response code: {url}({response.status})")
+                raise RundeckError(
+                    f"Unknwon response code: {session.url}({response.status})"
+                )
         else:
-            raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
+            raise RundeckError(
+                f"Connection diffused: {session.url}({response.status})\n{obj}"
+            )
 
 
 async def job_schedule_bulk_disable(
     session: RundeckClient,
-    entrypoint: str,
-    version: int,
     job_schedule_bulk_disable_request: JobScheduleBulkDisableRequest,
 ) -> JobBulkOperationResponse:
     """Bulk disable job schedule"""
-    if version < 26:
-        raise VersionError(f"Insufficient api version error, Required >26")
-    url = entrypoint + "/api/{version}/jobs/schedule/disable".format(version=version)
+    if session.version < 26:
+        raise VersionError(
+            f"Insufficient api version error, Required >{session.version}"
+        )
+    url = session.format_url(
+        "/api/{version}/jobs/schedule/disable", version=session.version
+    )
     async with session.request(
         "POST",
         url,
-        data=dict(**job_schedule_bulk_disable_request.dict()),
+        data=json.dumps(job_schedule_bulk_disable_request)
+        if isinstance(job_schedule_bulk_disable_request, dict)
+        else job_schedule_bulk_disable_request.json(),
         params=dict(),
     ) as response:
         obj = await response.text()
-        if response.ok():
+        if response.ok:
             try:
-                response_type = {"200": JobBulkOperationResponse}[response.status]
-                if issubclass(response_type, BaseModel):
-                    return parse_obj_as(response_type, obj)
+                response_type = {(200): JobBulkOperationResponse}[response.status]
+                if response_type is None:
+                    return None
                 else:
-                    return response_type(obj)
+                    return parse_raw_as(response_type, obj)
             except KeyError:
-                raise RundeckError(f"Unknwon response code: {url}({response.status})")
+                raise RundeckError(
+                    f"Unknwon response code: {session.url}({response.status})"
+                )
         else:
-            raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
+            raise RundeckError(
+                f"Connection diffused: {session.url}({response.status})\n{obj}"
+            )
 
 
 async def job_input_file_upload(
     session: RundeckClient,
-    entrypoint: str,
-    version: int,
     id: String,
     option_name: String,
     file_name: String,
     file: Object,
 ) -> None:
     """Upload file as job option"""
-    if version < 26:
-        raise VersionError(f"Insufficient api version error, Required >26")
-    url = entrypoint + "/api/{version}/job/{id}/input/file".format(
-        version=version, id=id
+    if session.version < 26:
+        raise VersionError(
+            f"Insufficient api version error, Required >{session.version}"
+        )
+    url = session.format_url(
+        "/api/{version}/job/{id}/input/file", version=session.version, id=id
     )
     async with session.request(
         "POST",
         url,
-        data=dict(**file.dict()),
+        data=json.dumps(file) if isinstance(file, dict) else file.json(),
         params=dict(option_name=option_name, file_name=file_name),
     ) as response:
         obj = await response.text()
-        if response.ok():
+        if response.ok:
             try:
-                response_type = {"200": None}[response.status]
-                if issubclass(response_type, BaseModel):
-                    return parse_obj_as(response_type, obj)
+                response_type = {(200): None}[response.status]
+                if response_type is None:
+                    return None
                 else:
-                    return response_type(obj)
+                    return parse_raw_as(response_type, obj)
             except KeyError:
-                raise RundeckError(f"Unknwon response code: {url}({response.status})")
+                raise RundeckError(
+                    f"Unknwon response code: {session.url}({response.status})"
+                )
         else:
-            raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
+            raise RundeckError(
+                f"Connection diffused: {session.url}({response.status})\n{obj}"
+            )
 
 
 async def job_input_file_upload(
-    session: RundeckClient, entrypoint: str, version: int, id: String
+    session: RundeckClient, id: String
 ) -> JobInputFileListResponse:
     """List uploaded input files for job"""
-    if version < 26:
-        raise VersionError(f"Insufficient api version error, Required >26")
-    url = entrypoint + "/api/{version}/job/{id}/input/files".format(
-        version=version, id=id
+    if session.version < 26:
+        raise VersionError(
+            f"Insufficient api version error, Required >{session.version}"
+        )
+    url = session.format_url(
+        "/api/{version}/job/{id}/input/files", version=session.version, id=id
     )
-    async with session.request("GET", url, data=dict(), params=dict()) as response:
+    async with session.request("GET", url, data=None, params=dict()) as response:
         obj = await response.text()
-        if response.ok():
+        if response.ok:
             try:
-                response_type = {"200": JobInputFileListResponse}[response.status]
-                if issubclass(response_type, BaseModel):
-                    return parse_obj_as(response_type, obj)
+                response_type = {(200): JobInputFileListResponse}[response.status]
+                if response_type is None:
+                    return None
                 else:
-                    return response_type(obj)
+                    return parse_raw_as(response_type, obj)
             except KeyError:
-                raise RundeckError(f"Unknwon response code: {url}({response.status})")
+                raise RundeckError(
+                    f"Unknwon response code: {session.url}({response.status})"
+                )
         else:
-            raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
+            raise RundeckError(
+                f"Connection diffused: {session.url}({response.status})\n{obj}"
+            )
 
 
 async def job_input_file_info_get(
-    session: RundeckClient, entrypoint: str, version: int, id: String
+    session: RundeckClient, id: String
 ) -> JobInputFileInfo:
     """Get job input file info"""
-    if version < 26:
-        raise VersionError(f"Insufficient api version error, Required >26")
-    url = entrypoint + "/api/{version}/jobs/file/{id}".format(version=version, id=id)
-    async with session.request("GET", url, data=dict(), params=dict()) as response:
+    if session.version < 26:
+        raise VersionError(
+            f"Insufficient api version error, Required >{session.version}"
+        )
+    url = session.format_url(
+        "/api/{version}/jobs/file/{id}", version=session.version, id=id
+    )
+    async with session.request("GET", url, data=None, params=dict()) as response:
         obj = await response.text()
-        if response.ok():
+        if response.ok:
             try:
-                response_type = {"200": JobInputFileInfo}[response.status]
-                if issubclass(response_type, BaseModel):
-                    return parse_obj_as(response_type, obj)
+                response_type = {(200): JobInputFileInfo}[response.status]
+                if response_type is None:
+                    return None
                 else:
-                    return response_type(obj)
+                    return parse_raw_as(response_type, obj)
             except KeyError:
-                raise RundeckError(f"Unknwon response code: {url}({response.status})")
+                raise RundeckError(
+                    f"Unknwon response code: {session.url}({response.status})"
+                )
         else:
-            raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
+            raise RundeckError(
+                f"Connection diffused: {session.url}({response.status})\n{obj}"
+            )
 
 
 async def job_workflow_get(
-    session: RundeckClient, entrypoint: str, version: int, id: String
+    session: RundeckClient, id: String
 ) -> JobWorkflowGetResponse:
     """Get job workflow tree."""
-    if version < 34:
-        raise VersionError(f"Insufficient api version error, Required >34")
-    url = entrypoint + "/api/{version}/job/{id}/workflow".format(version=version, id=id)
-    async with session.request("GET", url, data=dict(), params=dict()) as response:
+    if session.version < 34:
+        raise VersionError(
+            f"Insufficient api version error, Required >{session.version}"
+        )
+    url = session.format_url(
+        "/api/{version}/job/{id}/workflow", version=session.version, id=id
+    )
+    async with session.request("GET", url, data=None, params=dict()) as response:
         obj = await response.text()
-        if response.ok():
+        if response.ok:
             try:
-                response_type = {"200": JobWorkflowGetResponse}[response.status]
-                if issubclass(response_type, BaseModel):
-                    return parse_obj_as(response_type, obj)
+                response_type = {(200): JobWorkflowGetResponse}[response.status]
+                if response_type is None:
+                    return None
                 else:
-                    return response_type(obj)
+                    return parse_raw_as(response_type, obj)
             except KeyError:
-                raise RundeckError(f"Unknwon response code: {url}({response.status})")
+                raise RundeckError(
+                    f"Unknwon response code: {session.url}({response.status})"
+                )
         else:
-            raise RundeckError(f"Connection diffused: {url}({response.status})\n{obj}")
+            raise RundeckError(
+                f"Connection diffused: {session.url}({response.status})\n{obj}"
+            )

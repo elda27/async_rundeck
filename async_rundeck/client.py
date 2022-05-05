@@ -1,12 +1,18 @@
-from functools import lru_cache
+from contextlib import contextmanager
 import os
-from typing import Any, Dict, Generic, Literal, Type, TypeVar
+from typing import Any, Dict
 from aiohttp import ClientSession, ClientResponse
-from pydantic import BaseModel
 from async_rundeck.exceptions import RundeckError
 
 
 class RundeckClient:
+    _default_options = {
+        "headers": {
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+        },
+    }
+
     def __init__(
         self,
         url: str = None,
@@ -25,49 +31,110 @@ class RundeckClient:
             raise ValueError("Cannot authenticate without a token or username/password")
         self.session_id: str = None
         self._session: ClientSession = None
+        self._context_options: Dict[str, Any] = self._default_options
+
+    @contextmanager
+    def context_options(self, options: Dict[str, Any]) -> Any:
+        self._context_options = options
+        yield
+        self._context_options = self._defalut_options
+
+    @property
+    def version(self) -> str:
+        """Alias of api_version"""
+        return self.api_version
 
     @property
     def options(self) -> Dict[str, Dict[str, Any]]:
-        return {
-            "headers": {"Accept": "application/json"},
-            "params": {},
-        }
+        options = self._context_options
+        if self.session_id is not None:
+            options["cookies"] = {"JSESSIONID": self.session_id}
+
+        return options
+
+    def format_url(self, path: str, **kwargs) -> str:
+        """format url with path and query parameters
+
+        Parameters
+        ----------
+        path : str
+            accesing url
+
+        Returns
+        -------
+        str
+            formatted url
+        """
+        return (self.url + path).format(**kwargs)
 
     async def __aenter__(self) -> "RundeckClient":
         if self._session is None:
-            self._session = await ClientSession().__aenter__()
-        if self.token is None and self.session_id is None:
-            with ClientSession() as session:
-                self.session_id = await self.auth(session)
-            self._session = await ClientSession(
-                cookie=dict(JSESSIONID=self.session_id)
-            ).__aenter__()
+            self._session = ClientSession()
+            self._session = await self._session.__aenter__()
+            if self.token is None and self.session_id is None:
+                self.session_id = await self.auth(self._session)
         return self
 
     async def __aexit__(self, *args) -> "RundeckClient":
-        await self._session.__aexit__(*args)
+        if self._session is not None:
+            await self._session.__aexit__(*args)
         self._session = None
 
-    async def request(self, method: str, url: str, **kwargs) -> ClientResponse:
+    def request(self, method: str, url: str, **kwargs) -> ClientResponse:
+        """Requesting a resource
+
+        Parameters
+        ----------
+        method : str
+            Requesting method
+        url : str
+            url to request
+
+        Returns
+        -------
+        ClientResponse
+            response object. see aiohttp.ClientResponse for more details
+        """
         options = self.options
         for k, v in kwargs.items():
-            options[k].update(v)
+            if isinstance(v, dict):
+                options.setdefault(k, {}).update(v)
+            else:
+                options[k] = v
         if self.token:
             options["headers"]["X-Rundeck-Auth-Token"] = self.token
 
-        return await self._session.request(method, url, **self.options)
+        return self._session.request(method, url, **options)
 
-    async def auth(self) -> str:
+    async def auth(self, session: ClientSession) -> str:
+        """username/password authentication
+
+        Parameters
+        ----------
+        session : ClientSession
+            session to use for authentication
+
+        Returns
+        -------
+        str
+            session id
+
+        Raises
+        ------
+        RundeckError
+            if authentication fails
+        """
         url = self.url + "/j_security_check"
         p = {"j_username": self.username, "j_password": self.password}
-        with await self._session.post(
+        async with session.post(
             url,
             data=p,
-        ) as r:
-            session_id = r.cookies.get("JSESSIONID")
-            if session_id is None:
-                with r.history[-1] as r:
+        ) as response:
+            if len(response.history) > 1:
+                async with response.history[0] as r:
                     session_id = r.cookies.get("JSESSIONID")
+            else:
+                session_id = response.cookies.get("JSESSIONID")
         if session_id is None:
             raise RundeckError("Authrorization failed")
         return session_id.value
