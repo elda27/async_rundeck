@@ -12,7 +12,7 @@ from dev.impl.convert_schema import (
     Property,
     _as_optional_if_required,
 )
-from dev.impl.special_cases import special_case_property
+from dev.impl.special_cases import invert_property, special_case_property
 
 ParameterTypes = Literal["query", "path", "header", "cookie", "body"]
 
@@ -75,16 +75,6 @@ def convert_api_spec(spec_file: Path) -> ast.AST:
                                 annotation=ast.Name(id="RundeckClient", ctx=ast.Load()),
                                 type_comment=None,
                             ),
-                            ast.arg(
-                                arg="entrypoint",
-                                annotation=ast.Name(id="str", ctx=ast.Load()),
-                                type_comment=None,
-                            ),
-                            ast.arg(
-                                arg="version",
-                                annotation=ast.Name(id="int", ctx=ast.Load()),
-                                type_comment=None,
-                            ),
                         ]
                         + sum(
                             [list(params.values()) for params in parameters.values()],
@@ -132,6 +122,7 @@ def convert_api_spec(spec_file: Path) -> ast.AST:
             new_classes.append(classdef)
 
     import_statements = [
+        ast.Import(names=[ast.alias(name="json", asname=None)]),
         ast.ImportFrom(
             module="enum",
             names=[
@@ -151,7 +142,7 @@ def convert_api_spec(spec_file: Path) -> ast.AST:
         ast.ImportFrom(
             module="pydantic",
             names=[
-                ast.alias(name="parse_obj_as", asname=None),
+                ast.alias(name="parse_raw_as", asname=None),
                 ast.alias(name="BaseModel", asname=None),
                 ast.alias(name="Field", asname=None),
             ],
@@ -277,24 +268,24 @@ def _get_parameters(
     return parameters, kw_parameters, defaults
 
 
-function_body = """async def func(client: "RundeckClient", **kwargs) -> T:
-    if version < {version}:
-        raise VersionError(f"Insufficient api version error, Required >{version}")
-    url = entrypoint + "{path}".format(version=version, {path_kws})
+function_body = """async def func(session: "RundeckClient", **kwargs) -> T:
+    if session.version < {version}:
+        raise VersionError(f"Insufficient api version error, Required >{{session.version}}")
+    url = session.format_url("{path}", version=session.version, {path_kws})
     async with session.request("{method}", url, data={body_kws}, params={query_kws}) as response:
         obj = await response.text()
-        if response.ok():
+        if response.ok:
             try:
                 response_type = {responses}[response.status]
-                if issubclass(response_type, BaseModel):
-                    return parse_obj_as(response_type, obj)
+                if response_type is None:
+                    return None
                 else:
-                    return response_type(obj)
+                    return parse_raw_as(response_type, obj)
             except KeyError:
-                raise RundeckError(f"Unknwon response code: {{url}}({{response.status}})")
+                raise RundeckError(f"Unknwon response code: {{session.url}}({{response.status}})")
         else:
             raise RundeckError(
-                f"Connection diffused: {{url}}({{response.status}})\\n{{obj}}")
+                f"Connection diffused: {{session.url}}({{response.status}})\\n{{obj}}")
 """
 
 
@@ -312,28 +303,39 @@ def generate_body(
                 method=method.upper(),
                 path=path.replace(f"/api/{version}", "/api/{version}"),
                 path_kws=", ".join(
-                    [f"{k}={k}" for k in parameters.get("path", {}).keys()]
+                    [
+                        f"{invert_property(k)}={k}"
+                        for k in parameters.get("path", {}).keys()
+                    ]
                 ),
                 query_kws="dict({})".format(
                     ",".join([f"{k}={k}" for k in parameters.get("query", {}).keys()])
                 ),
-                body_kws="dict({})".format(
-                    ",".join(
-                        [f"**{k}.dict()" for k in parameters.get("body", {}).keys()]
-                    )
-                ),
-                responses="{"
-                + (
-                    ",".join(
-                        [
-                            "'{k}':{v}".format(k=k, v=astor.to_source(t).strip("'\"\n"))
-                            for k, t in responses.items()
-                        ]
-                    )
-                )
-                + "}",
+                body_kws=format_body_kws(parameters.get("body", {})),
+                responses=format_responses(responses),
             )
         )
         .body[0]
         .body
+    )
+
+
+def format_body_kws(body: dict) -> str:
+    for k in body.keys():
+        return f"json.dumps({k}) if isinstance({k}, dict) else {k}.json()"
+    return "None"
+
+
+def format_responses(responses: Dict[int, ast.Name]) -> str:
+    return (
+        "{"
+        + (
+            ",".join(
+                [
+                    "{k}:{v}".format(k=k, v=astor.to_source(t).strip("'\"\n"))
+                    for k, t in responses.items()
+                ]
+            )
+        )
+        + "}"
     )
