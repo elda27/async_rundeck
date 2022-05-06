@@ -37,7 +37,7 @@ class RundeckClient:
     def context_options(self, options: Dict[str, Any]) -> Any:
         self._context_options = options
         yield
-        self._context_options = self._defalut_options
+        self._context_options = self._default_options
 
     @property
     def version(self) -> str:
