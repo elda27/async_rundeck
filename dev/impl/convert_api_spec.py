@@ -313,15 +313,19 @@ def generate_body(
                         for k in parameters.get("path", {}).keys()
                     ]
                 ),
-                query_kws="filter_none(dict({}))".format(
-                    ",".join([f"{k}={k}" for k in parameters.get("query", {}).keys()])
-                ),
+                query_kws=format_query_kws(parameters.get("query", {})),
                 body_kws=format_body_kws(parameters.get("body", {})),
                 responses=format_responses(responses),
             )
         )
         .body[0]
         .body
+    )
+
+
+def format_query_kws(query_kws: Dict[str, ast.AST]) -> str:
+    return "filter_none(dict({}))".format(
+        ",".join([f"{invert_property(k)}={k}" for k in query_kws.keys()])
     )
 
 
