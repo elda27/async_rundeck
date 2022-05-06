@@ -1,9 +1,2 @@
-from typing import Any
-
-
-def import_doc(proto_func: Any) -> Any:
-    def _(fn: Any):
-        fn.__doc__ = proto_func.__doc__
-        return fn
-
-    return _
+def filter_none(data: dict) -> dict:
+    return {k: v for k, v in data.items() if v is not None}
