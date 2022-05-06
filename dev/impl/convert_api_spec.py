@@ -165,6 +165,11 @@ def convert_api_spec(spec_file: Path) -> ast.AST:
             level=0,
         ),
         ast.ImportFrom(
+            module="async_rundeck.misc",
+            names=[ast.alias(name="filter_none", asname=None)],
+            level=0,
+        ),
+        ast.ImportFrom(
             module="async_rundeck.exceptions",
             names=[
                 ast.alias(name="RundeckError", asname=None),
@@ -308,7 +313,7 @@ def generate_body(
                         for k in parameters.get("path", {}).keys()
                     ]
                 ),
-                query_kws="dict({})".format(
+                query_kws="filter_none(dict({}))".format(
                     ",".join([f"{k}={k}" for k in parameters.get("query", {}).keys()])
                 ),
                 body_kws=format_body_kws(parameters.get("body", {})),
@@ -332,7 +337,9 @@ def format_responses(responses: Dict[int, ast.Name]) -> str:
         + (
             ",".join(
                 [
-                    "{k}:{v}".format(k=k, v=astor.to_source(t).strip("'\"\n"))
+                    "{k}:{v}".format(
+                        k=k, v=astor.to_source(t).strip("'\"\n").replace('"', "")
+                    )
                     for k, t in responses.items()
                 ]
             )
