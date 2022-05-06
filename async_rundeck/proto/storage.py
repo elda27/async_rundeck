@@ -10,6 +10,7 @@ from typing import List, Optional, Union
 from pydantic import parse_raw_as, BaseModel, Field
 from async_rundeck.proto.json_types import Integer, Number, String, Boolean, Object
 from async_rundeck.client import RundeckClient
+from async_rundeck.misc import filter_none
 from async_rundeck.exceptions import RundeckError, VersionError
 from async_rundeck.proto.definitions import StorageKeyListResponse, Object
 
@@ -27,13 +28,17 @@ async def storage_key_get_material(
         version=session.version,
         keyPath=key_path,
     )
-    async with session.request("GET", url, data=None, params=dict()) as response:
+    async with session.request(
+        "GET", url, data=None, params=filter_none(dict())
+    ) as response:
         obj = await response.text()
         if response.ok:
             try:
                 response_type = {(200): Object, (404): None}[response.status]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:
@@ -57,7 +62,9 @@ async def storage_key_get_metadata(
     url = session.format_url(
         "/api/{version}/storage/keys/{path}", version=session.version, path=path
     )
-    async with session.request("GET", url, data=None, params=dict()) as response:
+    async with session.request(
+        "GET", url, data=None, params=filter_none(dict())
+    ) as response:
         obj = await response.text()
         if response.ok:
             try:
@@ -66,6 +73,8 @@ async def storage_key_get_metadata(
                 ]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:
@@ -97,7 +106,7 @@ async def storage_key_create(
         "POST",
         url,
         data=json.dumps(file) if isinstance(file, dict) else file.json(),
-        params=dict(),
+        params=filter_none(dict()),
     ) as response:
         obj = await response.text()
         if response.ok:
@@ -105,6 +114,8 @@ async def storage_key_create(
                 response_type = {(201): None, (409): None}[response.status]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:
@@ -136,7 +147,7 @@ async def storage_key_update(
         "PUT",
         url,
         data=json.dumps(file) if isinstance(file, dict) else file.json(),
-        params=dict(),
+        params=filter_none(dict()),
     ) as response:
         obj = await response.text()
         if response.ok:
@@ -144,6 +155,8 @@ async def storage_key_update(
                 response_type = {(200): None}[response.status]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:
@@ -165,13 +178,17 @@ async def storage_key_delete(session: RundeckClient, path: String) -> None:
     url = session.format_url(
         "/api/{version}/storage/keys/{path}", version=session.version, path=path
     )
-    async with session.request("DELETE", url, data=None, params=dict()) as response:
+    async with session.request(
+        "DELETE", url, data=None, params=filter_none(dict())
+    ) as response:
         obj = await response.text()
         if response.ok:
             try:
                 response_type = {(204): None}[response.status]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:

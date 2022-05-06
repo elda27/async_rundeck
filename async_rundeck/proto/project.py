@@ -10,6 +10,7 @@ from typing import List, Optional, Union
 from pydantic import parse_raw_as, BaseModel, Field
 from async_rundeck.proto.json_types import Integer, Number, String, Boolean, Object
 from async_rundeck.client import RundeckClient
+from async_rundeck.misc import filter_none
 from async_rundeck.exceptions import RundeckError, VersionError
 from async_rundeck.proto.definitions import Project, Object
 
@@ -56,13 +57,17 @@ async def project_list(session: RundeckClient) -> List[Object]:
             f"Insufficient api version error, Required >{session.version}"
         )
     url = session.format_url("/api/{version}/projects", version=session.version)
-    async with session.request("GET", url, data=None, params=dict()) as response:
+    async with session.request(
+        "GET", url, data=None, params=filter_none(dict())
+    ) as response:
         obj = await response.text()
         if response.ok:
             try:
                 response_type = {(200): List[Object]}[response.status]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:
@@ -90,7 +95,7 @@ async def project_create(
         data=json.dumps(project_create_request)
         if isinstance(project_create_request, dict)
         else project_create_request.json(),
-        params=dict(),
+        params=filter_none(dict()),
     ) as response:
         obj = await response.text()
         if response.ok:
@@ -98,6 +103,8 @@ async def project_create(
                 response_type = {(201): Object, (409): None}[response.status]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:
@@ -119,13 +126,17 @@ async def project_get(session: RundeckClient, project: String) -> Union[Project,
     url = session.format_url(
         "/api/{version}/project/{project}", version=session.version, project=project
     )
-    async with session.request("GET", url, data=None, params=dict()) as response:
+    async with session.request(
+        "GET", url, data=None, params=filter_none(dict())
+    ) as response:
         obj = await response.text()
         if response.ok:
             try:
                 response_type = {(200): Project, (404): None}[response.status]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:
@@ -147,13 +158,17 @@ async def project_delete(session: RundeckClient, project: String) -> None:
     url = session.format_url(
         "/api/{version}/project/{project}", version=session.version, project=project
     )
-    async with session.request("DELETE", url, data=None, params=dict()) as response:
+    async with session.request(
+        "DELETE", url, data=None, params=filter_none(dict())
+    ) as response:
         obj = await response.text()
         if response.ok:
             try:
                 response_type = {(204): None}[response.status]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:
@@ -179,13 +194,17 @@ async def project_config_get(
         version=session.version,
         project=project,
     )
-    async with session.request("GET", url, data=None, params=dict()) as response:
+    async with session.request(
+        "GET", url, data=None, params=filter_none(dict())
+    ) as response:
         obj = await response.text()
         if response.ok:
             try:
                 response_type = {(200): Object, (404): None}[response.status]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:
@@ -217,7 +236,7 @@ async def project_config_update(
         data=json.dumps(project_config_update_request)
         if isinstance(project_config_update_request, dict)
         else project_config_update_request.json(),
-        params=dict(),
+        params=filter_none(dict()),
     ) as response:
         obj = await response.text()
         if response.ok:
@@ -225,6 +244,8 @@ async def project_config_update(
                 response_type = {(200): None}[response.status]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:
@@ -251,13 +272,17 @@ async def project_config_key_get(
         project=project,
         key=key,
     )
-    async with session.request("GET", url, data=None, params=dict()) as response:
+    async with session.request(
+        "GET", url, data=None, params=filter_none(dict())
+    ) as response:
         obj = await response.text()
         if response.ok:
             try:
                 response_type = {(200): ProjectConfigKeyGetResponse}[response.status]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:
@@ -293,7 +318,7 @@ async def project_config_key_set(
         data=json.dumps(project_config_key_set_request)
         if isinstance(project_config_key_set_request, dict)
         else project_config_key_set_request.json(),
-        params=dict(),
+        params=filter_none(dict()),
     ) as response:
         obj = await response.text()
         if response.ok:
@@ -301,6 +326,8 @@ async def project_config_key_set(
                 response_type = {(200): ProjectConfigKeySetResponse}[response.status]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:
@@ -327,13 +354,17 @@ async def project_config_key_delete(
         project=project,
         key=key,
     )
-    async with session.request("DELETE", url, data=None, params=dict()) as response:
+    async with session.request(
+        "DELETE", url, data=None, params=filter_none(dict())
+    ) as response:
         obj = await response.text()
         if response.ok:
             try:
                 response_type = {(204): None}[response.status]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:
@@ -369,8 +400,10 @@ async def project_jobs_export(
         "GET",
         url,
         data=None,
-        params=dict(
-            format=format, idlist=idlist, group_path=group_path, job_filter=job_filter
+        params=filter_none(
+            dict(
+                format=format, idlist=idlist, groupPath=group_path, jobFilter=job_filter
+            )
         ),
     ) as response:
         obj = await response.text()
@@ -379,6 +412,8 @@ async def project_jobs_export(
                 response_type = {(200): String}[response.status]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:
@@ -416,8 +451,8 @@ async def project_jobs_import(
         "POST",
         url,
         data=json.dumps(file) if isinstance(file, dict) else file.json(),
-        params=dict(
-            file_format=file_format, dupe_option=dupe_option, uuid_option=uuid_option
+        params=filter_none(
+            dict(fileFormat=file_format, dupeOption=dupe_option, uuidOption=uuid_option)
         ),
     ) as response:
         obj = await response.text()
@@ -426,6 +461,8 @@ async def project_jobs_import(
                 response_type = {(200): Object}[response.status]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:
@@ -462,11 +499,13 @@ async def project_archive_import(
         "PUT",
         url,
         data=json.dumps(file) if isinstance(file, dict) else file.json(),
-        params=dict(
-            job_uuid_option=job_uuid_option,
-            import_executions=import_executions,
-            import_config=import_config,
-            import_a_c_l=import_a_c_l,
+        params=filter_none(
+            dict(
+                jobUuidOption=job_uuid_option,
+                importExecutions=import_executions,
+                importConfig=import_config,
+                importACL=import_a_c_l,
+            )
         ),
     ) as response:
         obj = await response.text()
@@ -475,6 +514,8 @@ async def project_archive_import(
                 response_type = {(200): None}[response.status]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:
@@ -513,14 +554,16 @@ async def project_archive_export_sync(
         "GET",
         url,
         data=None,
-        params=dict(
-            execution_ids=execution_ids,
-            export_all=export_all,
-            export_jobs=export_jobs,
-            export_executions=export_executions,
-            export_configs=export_configs,
-            export_readmes=export_readmes,
-            export_acls=export_acls,
+        params=filter_none(
+            dict(
+                executionIds=execution_ids,
+                exportAll=export_all,
+                exportJobs=export_jobs,
+                exportExecutions=export_executions,
+                exportConfigs=export_configs,
+                exportReadmes=export_readmes,
+                exportAcls=export_acls,
+            )
         ),
     ) as response:
         obj = await response.text()
@@ -529,6 +572,8 @@ async def project_archive_export_sync(
                 response_type = {(200): Object}[response.status]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:
@@ -554,7 +599,9 @@ async def project_readme_get(
         version=session.version,
         project=project,
     )
-    async with session.request("GET", url, data=None, params=dict()) as response:
+    async with session.request(
+        "GET", url, data=None, params=filter_none(dict())
+    ) as response:
         obj = await response.text()
         if response.ok:
             try:
@@ -563,6 +610,8 @@ async def project_readme_get(
                 ]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:
@@ -594,7 +643,7 @@ async def project_readme_put(
         data=json.dumps(readme_update_request)
         if isinstance(readme_update_request, dict)
         else readme_update_request.json(),
-        params=dict(),
+        params=filter_none(dict()),
     ) as response:
         obj = await response.text()
         if response.ok:
@@ -602,6 +651,8 @@ async def project_readme_put(
                 response_type = {(200): None}[response.status]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:
@@ -625,13 +676,17 @@ async def project_readme_delete(session: RundeckClient, project: String) -> None
         version=session.version,
         project=project,
     )
-    async with session.request("DELETE", url, data=None, params=dict()) as response:
+    async with session.request(
+        "DELETE", url, data=None, params=filter_none(dict())
+    ) as response:
         obj = await response.text()
         if response.ok:
             try:
                 response_type = {(204): None}[response.status]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:
@@ -657,7 +712,9 @@ async def project_motd_get(
         version=session.version,
         project=project,
     )
-    async with session.request("GET", url, data=None, params=dict()) as response:
+    async with session.request(
+        "GET", url, data=None, params=filter_none(dict())
+    ) as response:
         obj = await response.text()
         if response.ok:
             try:
@@ -666,6 +723,8 @@ async def project_motd_get(
                 ]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:
@@ -697,7 +756,7 @@ async def project_motd_put(
         data=json.dumps(motd_update_request)
         if isinstance(motd_update_request, dict)
         else motd_update_request.json(),
-        params=dict(),
+        params=filter_none(dict()),
     ) as response:
         obj = await response.text()
         if response.ok:
@@ -705,6 +764,8 @@ async def project_motd_put(
                 response_type = {(200): None}[response.status]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:
@@ -728,13 +789,17 @@ async def project_motd_delete(session: RundeckClient, project: String) -> None:
         version=session.version,
         project=project,
     )
-    async with session.request("DELETE", url, data=None, params=dict()) as response:
+    async with session.request(
+        "DELETE", url, data=None, params=filter_none(dict())
+    ) as response:
         obj = await response.text()
         if response.ok:
             try:
                 response_type = {(204): None}[response.status]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:

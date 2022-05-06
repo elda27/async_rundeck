@@ -10,6 +10,7 @@ from typing import List, Optional, Union
 from pydantic import parse_raw_as, BaseModel, Field
 from async_rundeck.proto.json_types import Integer, Number, String, Boolean, Object
 from async_rundeck.client import RundeckClient
+from async_rundeck.misc import filter_none
 from async_rundeck.exceptions import RundeckError, VersionError
 from async_rundeck.proto.definitions import (
     Execution,
@@ -38,13 +39,17 @@ async def execution_status_get(session: RundeckClient, id: String) -> Execution:
     url = session.format_url(
         "/api/{version}/execution/{id}", version=session.version, id=id
     )
-    async with session.request("GET", url, data=None, params=dict()) as response:
+    async with session.request(
+        "GET", url, data=None, params=filter_none(dict())
+    ) as response:
         obj = await response.text()
         if response.ok:
             try:
                 response_type = {(200): Execution}[response.status]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:
@@ -66,13 +71,17 @@ async def execution_delete(session: RundeckClient, id: String) -> None:
     url = session.format_url(
         "/api/{version}/execution/{id}", version=session.version, id=id
     )
-    async with session.request("DELETE", url, data=None, params=dict()) as response:
+    async with session.request(
+        "DELETE", url, data=None, params=filter_none(dict())
+    ) as response:
         obj = await response.text()
         if response.ok:
             try:
                 response_type = {(204): None}[response.status]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:
@@ -102,7 +111,7 @@ async def execution_bulk_delete(
         data=json.dumps(execution_bulk_delete_request)
         if isinstance(execution_bulk_delete_request, dict)
         else execution_bulk_delete_request.json(),
-        params=dict(),
+        params=filter_none(dict()),
     ) as response:
         obj = await response.text()
         if response.ok:
@@ -110,6 +119,8 @@ async def execution_bulk_delete(
                 response_type = {(200): JobExecutionDelete}[response.status]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:
@@ -131,13 +142,17 @@ async def execution_state_get(session: RundeckClient, id: String) -> ExecutionSt
     url = session.format_url(
         "/api/{version}/execution/{id}/state", version=session.version, id=id
     )
-    async with session.request("GET", url, data=None, params=dict()) as response:
+    async with session.request(
+        "GET", url, data=None, params=filter_none(dict())
+    ) as response:
         obj = await response.text()
         if response.ok:
             try:
                 response_type = {(200): ExecutionState}[response.status]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:
@@ -161,7 +176,9 @@ async def execution_input_files_list(
     url = session.format_url(
         "/api/{version}/execution/{id}/input/files", version=session.version, id=id
     )
-    async with session.request("GET", url, data=None, params=dict()) as response:
+    async with session.request(
+        "GET", url, data=None, params=filter_none(dict())
+    ) as response:
         obj = await response.text()
         if response.ok:
             try:
@@ -170,6 +187,8 @@ async def execution_input_files_list(
                 ]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:
@@ -195,13 +214,17 @@ async def execution_list_running(
         version=session.version,
         project=project,
     )
-    async with session.request("GET", url, data=None, params=dict()) as response:
+    async with session.request(
+        "GET", url, data=None, params=filter_none(dict())
+    ) as response:
         obj = await response.text()
         if response.ok:
             try:
                 response_type = {(200): ExecutionList}[response.status]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:
@@ -240,14 +263,16 @@ async def execution_query(
         "GET",
         url,
         data=None,
-        params=dict(
-            status_filter=status_filter,
-            abortedby_filter=abortedby_filter,
-            user_filter=user_filter,
-            recent_filter=recent_filter,
-            older_filter=older_filter,
-            begin=begin,
-            adhoc=adhoc,
+        params=filter_none(
+            dict(
+                statusFilter=status_filter,
+                abortedbyFilter=abortedby_filter,
+                userFilter=user_filter,
+                recentFilter=recent_filter,
+                olderFilter=older_filter,
+                begin=begin,
+                adhoc=adhoc,
+            )
         ),
     ) as response:
         obj = await response.text()
@@ -256,6 +281,8 @@ async def execution_query(
                 response_type = {(200): None}[response.status]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:
@@ -284,7 +311,10 @@ async def execution_output_get(
         "/api/{version}/execution/{id}/output", version=session.version, id=id
     )
     async with session.request(
-        "GET", url, data=None, params=dict(offset=offset, maxlines=maxlines)
+        "GET",
+        url,
+        data=None,
+        params=filter_none(dict(offset=offset, maxlines=maxlines)),
     ) as response:
         obj = await response.text()
         if response.ok:
@@ -292,6 +322,8 @@ async def execution_output_get(
                 response_type = {(200): ExecutionOutput}[response.status]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:

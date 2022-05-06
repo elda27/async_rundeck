@@ -10,6 +10,7 @@ from typing import List, Optional, Union
 from pydantic import parse_raw_as, BaseModel, Field
 from async_rundeck.proto.json_types import Integer, Number, String, Boolean, Object
 from async_rundeck.client import RundeckClient
+from async_rundeck.misc import filter_none
 from async_rundeck.exceptions import RundeckError, VersionError
 from async_rundeck.proto.definitions import (
     User,
@@ -30,13 +31,17 @@ async def user_list(session: RundeckClient) -> List["User"]:
             f"Insufficient api version error, Required >{session.version}"
         )
     url = session.format_url("/api/{version}/user/list", version=session.version)
-    async with session.request("GET", url, data=None, params=dict()) as response:
+    async with session.request(
+        "GET", url, data=None, params=filter_none(dict())
+    ) as response:
         obj = await response.text()
         if response.ok:
             try:
-                response_type = {(200): List["User"]}[response.status]
+                response_type = {(200): List[User]}[response.status]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:
@@ -56,13 +61,17 @@ async def user_profile_get(session: RundeckClient) -> User:
             f"Insufficient api version error, Required >{session.version}"
         )
     url = session.format_url("/api/{version}/user/info", version=session.version)
-    async with session.request("GET", url, data=None, params=dict()) as response:
+    async with session.request(
+        "GET", url, data=None, params=filter_none(dict())
+    ) as response:
         obj = await response.text()
         if response.ok:
             try:
                 response_type = {(200): User}[response.status]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:
@@ -88,7 +97,7 @@ async def user_profile_update(
         "POST",
         url,
         data=json.dumps(user) if isinstance(user, dict) else user.json(),
-        params=dict(),
+        params=filter_none(dict()),
     ) as response:
         obj = await response.text()
         if response.ok:
@@ -96,6 +105,8 @@ async def user_profile_update(
                 response_type = {(200): User}[response.status]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:
@@ -117,13 +128,17 @@ async def user_profile_get_by_id(session: RundeckClient, user_i_d: String) -> Us
     url = session.format_url(
         "/api/{version}/user/info/{userID}", version=session.version, userID=user_i_d
     )
-    async with session.request("GET", url, data=None, params=dict()) as response:
+    async with session.request(
+        "GET", url, data=None, params=filter_none(dict())
+    ) as response:
         obj = await response.text()
         if response.ok:
             try:
                 response_type = {(200): User}[response.status]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:
@@ -151,7 +166,7 @@ async def user_profile_update_by_id(
         "POST",
         url,
         data=json.dumps(user) if isinstance(user, dict) else user.json(),
-        params=dict(),
+        params=filter_none(dict()),
     ) as response:
         obj = await response.text()
         if response.ok:
@@ -159,6 +174,8 @@ async def user_profile_update_by_id(
                 response_type = {(200): User}[response.status]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:
@@ -178,13 +195,17 @@ async def user_role_list(session: RundeckClient) -> UserRoleListResponse:
             f"Insufficient api version error, Required >{session.version}"
         )
     url = session.format_url("/api/{version}/user/roles", version=session.version)
-    async with session.request("GET", url, data=None, params=dict()) as response:
+    async with session.request(
+        "GET", url, data=None, params=filter_none(dict())
+    ) as response:
         obj = await response.text()
         if response.ok:
             try:
                 response_type = {(200): UserRoleListResponse}[response.status]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:

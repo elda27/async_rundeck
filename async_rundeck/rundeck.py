@@ -1,9 +1,9 @@
 from ctypes import Union
 from typing import Any, Dict, List, Literal, Optional, Tuple
+from aiohttp import FormData
 
 from pydantic import parse_raw_as
 from async_rundeck.client import RundeckClient
-from async_rundeck.misc import import_doc
 
 from async_rundeck.proto.definitions import ExecutionList, Job, Project
 from async_rundeck import proto
@@ -246,7 +246,7 @@ class Rundeck:
             server_node_uuid_filter=server_node_uuid_filter,
         )
 
-    async def create_job(
+    async def run_job(
         self,
         job_id: str,
         *,
@@ -349,20 +349,20 @@ class Rundeck:
     async def import_jobs(
         self,
         project: str,
-        file: Any,
+        file: str,
         *,
         content_type: Optional[
             Literal[
                 # "x-www-form-urlencoded",
-                "multipart/form-data",
-                # "application/xml",
-                # "application/yaml",
+                # "multipart/form-data",
+                "application/xml",
+                "application/yaml",
             ]
         ] = "x-www-form-urlencoded",
         file_format: Optional[Literal["xml", "yaml"]] = "xml",
         dupe_option: Optional[Literal["skip", "create", "update"]] = "create",
         uuid_option: Optional[Literal["preserve", "remove"]] = "preserve",
-    ) -> Optional[str]:
+    ) -> Optional[Dict[Literal["succeeded", "failed", "skipped"], List[Any]]]:
         """Export jobs in a project to a file.
 
         Parameters
@@ -373,10 +373,10 @@ class Rundeck:
         content_type: Literal[""], optional
             [Not implemeneted] Content-Type: x-www-form-urlencoded, with a xmlBatch
                 request parameter containing the input content
-            Content-Type: multipart/form-data multipart MIME request part
-                named xmlBatch containing the content.
-            [Not implemeneted] Content-Type: application/xml, request body is the Jobs XML formatted job definition
-            [Not implemeneted] Content-Type: application/yaml, request body is the Jobs YAML formatted job definition
+            [Not implemeneted] Content-Type: multipart/form-data multipart MIME request part
+                named xmlBatch containing the xml content.
+            Content-Type: application/xml, request body is the Jobs XML formatted job definition
+            Content-Type: application/yaml, request body is the Jobs YAML formatted job definition
 
         file_format : Literal["xml", "yaml"], optional
             can be "xml" or "yaml" to specify the input format,
@@ -390,7 +390,21 @@ class Rundeck:
                 This may cause the import to fail if the UUID is already used. (Default value).
             - remove: Remove the UUIDs from imported jobs.
                 Allows update/create to succeed without conflict on UUID.
+
+        Returns
+        -------
+        Optional[Dict[Literal["succeeded", "failed", "skipped"], List[Any]]]
+            A set of status results.
         """
+        if content_type == "multipart/form-data":
+            data = FormData()
+            data.add_field("xmlBatch", file, content_type=content_type)
+        elif content_type == "application/xml":
+            data = file
+        elif content_type == "application/yaml":
+            data = file
+        else:
+            raise ValueError(f"Unsupported content_type: {content_type}")
         with self.client.context_options(
             {
                 "headers": {
@@ -412,17 +426,21 @@ class Rundeck:
             async with session.request(
                 "POST",
                 url,
-                data=file,
+                data=data,
                 params=dict(
-                    file_format=file_format,
-                    dupe_option=dupe_option,
-                    uuid_option=uuid_option,
+                    fileFormat=file_format,
+                    dupeOption=dupe_option,
+                    uuidOption=uuid_option,
                 ),
             ) as response:
                 obj = await response.text()
                 if response.ok:
                     try:
-                        response_type = {(200): str}[response.status]
+                        response_type = {
+                            (200): Dict[
+                                Literal["succeeded", "failed", "skipped"], List[Any]
+                            ]
+                        }[response.status]
                         if response_type is None:
                             return None
                         else:

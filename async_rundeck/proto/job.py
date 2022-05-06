@@ -10,6 +10,7 @@ from typing import List, Optional, Union
 from pydantic import parse_raw_as, BaseModel, Field
 from async_rundeck.proto.json_types import Integer, Number, String, Boolean, Object
 from async_rundeck.client import RundeckClient
+from async_rundeck.misc import filter_none
 from async_rundeck.exceptions import RundeckError, VersionError
 from async_rundeck.proto.definitions import (
     Job,
@@ -95,22 +96,26 @@ async def job_list(
         "GET",
         url,
         data=None,
-        params=dict(
-            id_list=id_list,
-            group_path=group_path,
-            job_filter=job_filter,
-            job_exact_filter=job_exact_filter,
-            group_path_exact=group_path_exact,
-            scheduled_filter=scheduled_filter,
-            server_node_uuid_filter=server_node_uuid_filter,
+        params=filter_none(
+            dict(
+                idList=id_list,
+                groupPath=group_path,
+                jobFilter=job_filter,
+                jobExactFilter=job_exact_filter,
+                groupPathExact=group_path_exact,
+                scheduledFilter=scheduled_filter,
+                serverNodeUUIDFilter=server_node_uuid_filter,
+            )
         ),
     ) as response:
         obj = await response.text()
         if response.ok:
             try:
-                response_type = {(200): List["Job"]}[response.status]
+                response_type = {(200): List[Job]}[response.status]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:
@@ -132,13 +137,17 @@ async def job_execution_list(session: RundeckClient, id: String) -> ExecutionLis
     url = session.format_url(
         "/api/{version}/job/{id}/executions", version=session.version, id=id
     )
-    async with session.request("GET", url, data=None, params=dict()) as response:
+    async with session.request(
+        "GET", url, data=None, params=filter_none(dict())
+    ) as response:
         obj = await response.text()
         if response.ok:
             try:
                 response_type = {(200): ExecutionList}[response.status]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:
@@ -166,7 +175,7 @@ async def job_execution_run(
         "POST",
         url,
         data=json.dumps(request) if isinstance(request, dict) else request.json(),
-        params=dict(),
+        params=filter_none(dict()),
     ) as response:
         obj = await response.text()
         if response.ok:
@@ -174,6 +183,8 @@ async def job_execution_run(
                 response_type = {(200): Execution}[response.status]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:
@@ -197,13 +208,17 @@ async def job_execution_delete(
     url = session.format_url(
         "/api/{version}/job/{id}/executions", version=session.version, id=id
     )
-    async with session.request("DELETE", url, data=None, params=dict()) as response:
+    async with session.request(
+        "DELETE", url, data=None, params=filter_none(dict())
+    ) as response:
         obj = await response.text()
         if response.ok:
             try:
                 response_type = {(204): JobExecutionDelete}[response.status]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:
@@ -238,7 +253,7 @@ async def job_retry_execution(
         "POST",
         url,
         data=json.dumps(request) if isinstance(request, dict) else request.json(),
-        params=dict(),
+        params=filter_none(dict()),
     ) as response:
         obj = await response.text()
         if response.ok:
@@ -246,6 +261,8 @@ async def job_retry_execution(
                 response_type = {(200): ExecutionList}[response.status]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:
@@ -268,7 +285,7 @@ async def job_get(
         )
     url = session.format_url("/api/{version}/job/{id}", version=session.version, id=id)
     async with session.request(
-        "GET", url, data=None, params=dict(format=format)
+        "GET", url, data=None, params=filter_none(dict(format=format))
     ) as response:
         obj = await response.text()
         if response.ok:
@@ -276,6 +293,8 @@ async def job_get(
                 response_type = {(200): Object, (404): None}[response.status]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:
@@ -295,13 +314,17 @@ async def job_delete(session: RundeckClient, id: String) -> Union[None, None]:
             f"Insufficient api version error, Required >{session.version}"
         )
     url = session.format_url("/api/{version}/job/{id}", version=session.version, id=id)
-    async with session.request("DELETE", url, data=None, params=dict()) as response:
+    async with session.request(
+        "DELETE", url, data=None, params=filter_none(dict())
+    ) as response:
         obj = await response.text()
         if response.ok:
             try:
                 response_type = {(204): None, (404): None}[response.status]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:
@@ -323,13 +346,17 @@ async def job_info_get(session: RundeckClient, id: String) -> JobMetadata:
     url = session.format_url(
         "/api/{version}/job/{id}/info", version=session.version, id=id
     )
-    async with session.request("GET", url, data=None, params=dict()) as response:
+    async with session.request(
+        "GET", url, data=None, params=filter_none(dict())
+    ) as response:
         obj = await response.text()
         if response.ok:
             try:
                 response_type = {(200): JobMetadata}[response.status]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:
@@ -357,7 +384,7 @@ async def job_bulk_delete(
         data=json.dumps(job_bulk_delete_request)
         if isinstance(job_bulk_delete_request, dict)
         else job_bulk_delete_request.json(),
-        params=dict(),
+        params=filter_none(dict()),
     ) as response:
         obj = await response.text()
         if response.ok:
@@ -365,6 +392,8 @@ async def job_bulk_delete(
                 response_type = {(200): JobBulkOperationResponse}[response.status]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:
@@ -388,13 +417,17 @@ async def job_execution_enable(
     url = session.format_url(
         "/api/{version}/job/{id}/execution/enable", version=session.version, id=id
     )
-    async with session.request("POST", url, data=None, params=dict()) as response:
+    async with session.request(
+        "POST", url, data=None, params=filter_none(dict())
+    ) as response:
         obj = await response.text()
         if response.ok:
             try:
                 response_type = {(200): JobExecutionEnableResponse}[response.status]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:
@@ -418,13 +451,17 @@ async def job_execution_disable(
     url = session.format_url(
         "/api/{version}/job/{id}/execution/disable", version=session.version, id=id
     )
-    async with session.request("POST", url, data=None, params=dict()) as response:
+    async with session.request(
+        "POST", url, data=None, params=filter_none(dict())
+    ) as response:
         obj = await response.text()
         if response.ok:
             try:
                 response_type = {(200): JobExecutionDisableResponse}[response.status]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:
@@ -448,13 +485,17 @@ async def job_schedule_enable(
     url = session.format_url(
         "/api/{version}/job/{id}/schedule/enable", version=session.version, id=id
     )
-    async with session.request("POST", url, data=None, params=dict()) as response:
+    async with session.request(
+        "POST", url, data=None, params=filter_none(dict())
+    ) as response:
         obj = await response.text()
         if response.ok:
             try:
                 response_type = {(200): JobScheduleEnableResponse}[response.status]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:
@@ -478,13 +519,17 @@ async def job_schedule_disable(
     url = session.format_url(
         "/api/{version}/job/{id}/schedule/disable", version=session.version, id=id
     )
-    async with session.request("POST", url, data=None, params=dict()) as response:
+    async with session.request(
+        "POST", url, data=None, params=filter_none(dict())
+    ) as response:
         obj = await response.text()
         if response.ok:
             try:
                 response_type = {(200): JobScheduleDisableResponse}[response.status]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:
@@ -515,7 +560,7 @@ async def job_execution_bulk_enable(
         data=json.dumps(job_execution_bulk_enable_request)
         if isinstance(job_execution_bulk_enable_request, dict)
         else job_execution_bulk_enable_request.json(),
-        params=dict(),
+        params=filter_none(dict()),
     ) as response:
         obj = await response.text()
         if response.ok:
@@ -523,6 +568,8 @@ async def job_execution_bulk_enable(
                 response_type = {(200): JobBulkOperationResponse}[response.status]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:
@@ -553,7 +600,7 @@ async def job_execution_bulk_disable(
         data=json.dumps(job_execution_bulk_disable_request)
         if isinstance(job_execution_bulk_disable_request, dict)
         else job_execution_bulk_disable_request.json(),
-        params=dict(),
+        params=filter_none(dict()),
     ) as response:
         obj = await response.text()
         if response.ok:
@@ -561,6 +608,8 @@ async def job_execution_bulk_disable(
                 response_type = {(200): JobBulkOperationResponse}[response.status]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:
@@ -591,7 +640,7 @@ async def job_schedule_bulk_enable(
         data=json.dumps(job_schedule_bulk_enable_request)
         if isinstance(job_schedule_bulk_enable_request, dict)
         else job_schedule_bulk_enable_request.json(),
-        params=dict(),
+        params=filter_none(dict()),
     ) as response:
         obj = await response.text()
         if response.ok:
@@ -599,6 +648,8 @@ async def job_schedule_bulk_enable(
                 response_type = {(200): JobBulkOperationResponse}[response.status]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:
@@ -629,7 +680,7 @@ async def job_schedule_bulk_disable(
         data=json.dumps(job_schedule_bulk_disable_request)
         if isinstance(job_schedule_bulk_disable_request, dict)
         else job_schedule_bulk_disable_request.json(),
-        params=dict(),
+        params=filter_none(dict()),
     ) as response:
         obj = await response.text()
         if response.ok:
@@ -637,6 +688,8 @@ async def job_schedule_bulk_disable(
                 response_type = {(200): JobBulkOperationResponse}[response.status]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:
@@ -668,7 +721,7 @@ async def job_input_file_upload(
         "POST",
         url,
         data=json.dumps(file) if isinstance(file, dict) else file.json(),
-        params=dict(option_name=option_name, file_name=file_name),
+        params=filter_none(dict(optionName=option_name, fileName=file_name)),
     ) as response:
         obj = await response.text()
         if response.ok:
@@ -676,6 +729,8 @@ async def job_input_file_upload(
                 response_type = {(200): None}[response.status]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:
@@ -699,13 +754,17 @@ async def job_input_file_upload(
     url = session.format_url(
         "/api/{version}/job/{id}/input/files", version=session.version, id=id
     )
-    async with session.request("GET", url, data=None, params=dict()) as response:
+    async with session.request(
+        "GET", url, data=None, params=filter_none(dict())
+    ) as response:
         obj = await response.text()
         if response.ok:
             try:
                 response_type = {(200): JobInputFileListResponse}[response.status]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:
@@ -729,13 +788,17 @@ async def job_input_file_info_get(
     url = session.format_url(
         "/api/{version}/jobs/file/{id}", version=session.version, id=id
     )
-    async with session.request("GET", url, data=None, params=dict()) as response:
+    async with session.request(
+        "GET", url, data=None, params=filter_none(dict())
+    ) as response:
         obj = await response.text()
         if response.ok:
             try:
                 response_type = {(200): JobInputFileInfo}[response.status]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:
@@ -759,13 +822,17 @@ async def job_workflow_get(
     url = session.format_url(
         "/api/{version}/job/{id}/workflow", version=session.version, id=id
     )
-    async with session.request("GET", url, data=None, params=dict()) as response:
+    async with session.request(
+        "GET", url, data=None, params=filter_none(dict())
+    ) as response:
         obj = await response.text()
         if response.ok:
             try:
                 response_type = {(200): JobWorkflowGetResponse}[response.status]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:

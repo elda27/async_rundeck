@@ -10,6 +10,7 @@ from typing import List, Optional, Union
 from pydantic import parse_raw_as, BaseModel, Field
 from async_rundeck.proto.json_types import Integer, Number, String, Boolean, Object
 from async_rundeck.client import RundeckClient
+from async_rundeck.misc import filter_none
 from async_rundeck.exceptions import RundeckError, VersionError
 from async_rundeck.proto.definitions import (
     SystemInfo,
@@ -56,13 +57,17 @@ async def system_info_get(session: RundeckClient) -> SystemInfo:
             f"Insufficient api version error, Required >{session.version}"
         )
     url = session.format_url("/api/{version}/system/info", version=session.version)
-    async with session.request("GET", url, data=None, params=dict()) as response:
+    async with session.request(
+        "GET", url, data=None, params=filter_none(dict())
+    ) as response:
         obj = await response.text()
         if response.ok:
             try:
                 response_type = {(200): SystemInfo}[response.status]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:
@@ -84,13 +89,17 @@ async def system_log_storage_info_get(session: RundeckClient) -> LogStorage:
     url = session.format_url(
         "/api/{version}/system/logstorage", version=session.version
     )
-    async with session.request("GET", url, data=None, params=dict()) as response:
+    async with session.request(
+        "GET", url, data=None, params=filter_none(dict())
+    ) as response:
         obj = await response.text()
         if response.ok:
             try:
                 response_type = {(200): LogStorage}[response.status]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:
@@ -114,13 +123,17 @@ async def system_incomplete_log_storage_executions_get(
     url = session.format_url(
         "/api/{version}/system/logstorage/incomplete", version=session.version
     )
-    async with session.request("GET", url, data=None, params=dict()) as response:
+    async with session.request(
+        "GET", url, data=None, params=filter_none(dict())
+    ) as response:
         obj = await response.text()
         if response.ok:
             try:
                 response_type = {(200): IncompleteLogExecutions}[response.status]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:
@@ -144,7 +157,9 @@ async def system_incomplete_log_storage_executions_resume(
     url = session.format_url(
         "/api/{version}/system/logstorage/incomplete/resume", version=session.version
     )
-    async with session.request("POST", url, data=None, params=dict()) as response:
+    async with session.request(
+        "POST", url, data=None, params=filter_none(dict())
+    ) as response:
         obj = await response.text()
         if response.ok:
             try:
@@ -153,6 +168,8 @@ async def system_incomplete_log_storage_executions_resume(
                 }[response.status]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:
@@ -176,13 +193,17 @@ async def system_executions_enable(
     url = session.format_url(
         "/api/{version}/system/executions/enable", version=session.version
     )
-    async with session.request("POST", url, data=None, params=dict()) as response:
+    async with session.request(
+        "POST", url, data=None, params=filter_none(dict())
+    ) as response:
         obj = await response.text()
         if response.ok:
             try:
                 response_type = {(200): SystemExecutionsEnableResponse}[response.status]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:
@@ -206,7 +227,9 @@ async def system_executions_disable(
     url = session.format_url(
         "/api/{version}/system/executions/disable", version=session.version
     )
-    async with session.request("POST", url, data=None, params=dict()) as response:
+    async with session.request(
+        "POST", url, data=None, params=filter_none(dict())
+    ) as response:
         obj = await response.text()
         if response.ok:
             try:
@@ -215,6 +238,8 @@ async def system_executions_disable(
                 ]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:
@@ -246,7 +271,7 @@ async def system_scheduler_takeover(
         data=json.dumps(scheduler_takeover_request)
         if isinstance(scheduler_takeover_request, dict)
         else scheduler_takeover_request.json(),
-        params=dict(),
+        params=filter_none(dict()),
     ) as response:
         obj = await response.text()
         if response.ok:
@@ -254,6 +279,8 @@ async def system_scheduler_takeover(
                 response_type = {(200): TakeoverScheduleResponse}[response.status]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:
@@ -279,13 +306,17 @@ async def system_scheduled_jobs_for_server(
         version=session.version,
         uuid=uuid,
     )
-    async with session.request("GET", url, data=None, params=dict()) as response:
+    async with session.request(
+        "GET", url, data=None, params=filter_none(dict())
+    ) as response:
         obj = await response.text()
         if response.ok:
             try:
-                response_type = {(200): List["Job"]}[response.status]
+                response_type = {(200): List[Job]}[response.status]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:
@@ -305,13 +336,17 @@ async def system_scheduled_jobs_list(session: RundeckClient) -> List[Job]:
             f"Insufficient api version error, Required >{session.version}"
         )
     url = session.format_url("/api/{version}/scheduler/jobs", version=session.version)
-    async with session.request("GET", url, data=None, params=dict()) as response:
+    async with session.request(
+        "GET", url, data=None, params=filter_none(dict())
+    ) as response:
         obj = await response.text()
         if response.ok:
             try:
                 response_type = {(200): List[Job]}[response.status]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:
@@ -331,13 +366,17 @@ async def system_acl_policy_list(session: RundeckClient) -> Union[AclList, None]
             f"Insufficient api version error, Required >{session.version}"
         )
     url = session.format_url("/api/{version}/system/acl/", version=session.version)
-    async with session.request("GET", url, data=None, params=dict()) as response:
+    async with session.request(
+        "GET", url, data=None, params=filter_none(dict())
+    ) as response:
         obj = await response.text()
         if response.ok:
             try:
                 response_type = {(200): AclList, (404): None}[response.status]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:
@@ -363,13 +402,17 @@ async def system_acl_policy_get(
         version=session.version,
         policyName=policy_name,
     )
-    async with session.request("GET", url, data=None, params=dict()) as response:
+    async with session.request(
+        "GET", url, data=None, params=filter_none(dict())
+    ) as response:
         obj = await response.text()
         if response.ok:
             try:
                 response_type = {(200): AclPolicyResponse, (404): None}[response.status]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:
@@ -404,7 +447,7 @@ async def system_acl_policy_create(
         data=json.dumps(system_acl_policy_create_request)
         if isinstance(system_acl_policy_create_request, dict)
         else system_acl_policy_create_request.json(),
-        params=dict(),
+        params=filter_none(dict()),
     ) as response:
         obj = await response.text()
         if response.ok:
@@ -416,6 +459,8 @@ async def system_acl_policy_create(
                 }[response.status]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:
@@ -450,7 +495,7 @@ async def system_acl_policy_update(
         data=json.dumps(system_acl_policy_update_request)
         if isinstance(system_acl_policy_update_request, dict)
         else system_acl_policy_update_request.json(),
-        params=dict(),
+        params=filter_none(dict()),
     ) as response:
         obj = await response.text()
         if response.ok:
@@ -458,6 +503,8 @@ async def system_acl_policy_update(
                 response_type = {(200): AclPolicyResponse, (404): None}[response.status]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:
@@ -483,13 +530,17 @@ async def system_acl_policy_delete(
         version=session.version,
         policyName=policy_name,
     )
-    async with session.request("DELETE", url, data=None, params=dict()) as response:
+    async with session.request(
+        "DELETE", url, data=None, params=filter_none(dict())
+    ) as response:
         obj = await response.text()
         if response.ok:
             try:
                 response_type = {(204): None, (404): None}[response.status]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:
