@@ -307,7 +307,7 @@ class Dattarted(BaseModel):
 
 
 class Execution(BaseModel):
-    id: Optional[Number] = Field(alias="id")
+    id: Optional[String] = Field(alias="id")
     href: Optional[String] = Field(alias="href")
     permalink: Optional[String] = Field(alias="permalink")
     status: Optional[Status] = Field(alias="status")
@@ -432,7 +432,7 @@ class ExecutionOutput(BaseModel):
 
 
 class ExecutionState(BaseModel):
-    execution_id: Number = Field(alias="executionId")
+    execution_id: String = Field(alias="executionId")
     server_node: String = Field(alias="serverNode")
     execution_state: Optional["ExecutionStateState"] = Field(alias="executionState")
     completed: Boolean = Field(alias="completed")
