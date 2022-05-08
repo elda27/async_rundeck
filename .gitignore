@@ -3,5 +3,6 @@ __pycache__
 .vscode
 .venv
 .pytest_cache
+.coverage
 tests/schema/*.test.py
 tests/api/*.test.py
