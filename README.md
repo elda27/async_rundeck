@@ -22,13 +22,17 @@ The items checked in the following list are implemented.
 - [ ] Cluster Mode
 - [ ] ACLs
 - [ ] Jobs
+  - [x] List job
+  - [x] Run job
+  - [x] Import job from file
+  - [x] Export job from file
 - [ ] Executions
-  - [ ] Get Executions for a Job
+  - [x] Get Executions for a Job
   - [ ] Delete all Executions for a Job
-  - [ ] Listing Running Executions
+  - [x] Listing Running Executions
   - [ ] Execution Info
   - [ ] List Input Files for an Execution
-  - [ ] Delete an Execution
+  - [x] Delete an Execution
   - [ ] Bulk Delete Executions
   - [ ] Execution Query
   - [ ] Execution State
