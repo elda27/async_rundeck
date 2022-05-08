@@ -3,6 +3,7 @@ import os
 from typing import Any, Dict
 from aiohttp import ClientSession, ClientResponse
 from async_rundeck.exceptions import RundeckError
+from copy import deepcopy
 
 
 class RundeckClient:
@@ -31,13 +32,13 @@ class RundeckClient:
             raise ValueError("Cannot authenticate without a token or username/password")
         self.session_id: str = None
         self._session: ClientSession = None
-        self._context_options: Dict[str, Any] = self._default_options
+        self._context_options: Dict[str, Any] = deepcopy(self._default_options)
 
     @contextmanager
     def context_options(self, options: Dict[str, Any]) -> Any:
         self._context_options = options
         yield
-        self._context_options = self._default_options
+        self._context_options = deepcopy(self._default_options)
 
     @property
     def version(self) -> str:

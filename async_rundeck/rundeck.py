@@ -5,7 +5,7 @@ from aiohttp import FormData
 from pydantic import parse_raw_as
 from async_rundeck.client import RundeckClient
 
-from async_rundeck.proto.definitions import ExecutionList, Job, Project
+from async_rundeck.proto.definitions import Execution, ExecutionList, Job, Project
 from async_rundeck import proto
 from async_rundeck.exceptions import VersionError, RundeckError
 
@@ -455,14 +455,14 @@ class Rundeck:
                     )
 
     # Executions
-    async def get_executions(
+    async def get_execution(
         self,
         execution_id: str,
         # *,
         # status: Optional[Literal["suceeded", "failed", "aborted", "running"]] = None,
         # max: Optional[int] = None,
         # offset: Optional[int] = None,
-    ) -> List[proto.Execution]:
+    ) -> Execution:
         """Get the list of executions for a job.
 
         Parameters
@@ -496,7 +496,7 @@ class Rundeck:
         """
         return await proto.execution_delete(self.client, execution_id)
 
-    async def get_running_executions(self, project: str) -> ExecutionList:
+    async def list_running_executions(self, project: str) -> ExecutionList:
         """List running executions.
 
         Parameters
