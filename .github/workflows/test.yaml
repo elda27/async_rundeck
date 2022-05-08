@@ -10,7 +10,7 @@ jobs:
     if: github.event_name != 'pull_request' || github.head_ref != 'devel'
     strategy:
       matrix:
-        python: [3.6, 3.7, 3.8, 3.9]
+        python: [3.8, 3.9]
     name: py${{ matrix.python }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
