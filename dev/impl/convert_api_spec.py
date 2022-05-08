@@ -284,6 +284,8 @@ function_body = """async def func(session: "RundeckClient", **kwargs) -> T:
                 response_type = {responses}[response.status]
                 if response_type is None:
                     return None
+                elif response_type is String:
+                    return obj
                 else:
                     return parse_raw_as(response_type, obj)
             except KeyError:

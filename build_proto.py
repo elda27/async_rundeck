@@ -117,7 +117,9 @@ def create_scripts(work_dir: Path, output_dir: Path) -> None:
 def clone_repo(api_spec_dir: Path):
     if not api_spec_dir.exists():
         subprocess.check_call(
-            f"git clone https://github.com/rundeck/rundeck-api-specs {api_spec_dir}",
+            f"git clone -b patch https://github.com/elda27/rundeck-api-specs {api_spec_dir}",
+            # Temporaly commented out to avoid some issues
+            # f"git clone https://github.com/rundeck/rundeck-api-specs {api_spec_dir}",
             shell=True,
         )
 
