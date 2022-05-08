@@ -1,0 +1,38 @@
+<joblist>
+  <job>
+    <defaultTab>nodes</defaultTab>
+    <description>Test job description</description>
+    <executionEnabled>true</executionEnabled>
+    <id>48462d57-f406-4ce8-be10-3fd32d54a638</id>
+    <loglevel>INFO</loglevel>
+    <maxMultipleExecutions>1</maxMultipleExecutions>
+    <multipleExecutions>true</multipleExecutions>
+    <name>Test job</name>
+    <nodeFilterEditable>false</nodeFilterEditable>
+    <plugins />
+    <retry>3</retry>
+    <scheduleEnabled>true</scheduleEnabled>
+    <sequence keepgoing='false' strategy='node-first'>
+      <command>
+        <exec>echo $(date)</exec>
+      </command>
+      <command>
+        <exec>sleep 0.1</exec>
+      </command>
+      <command>
+        <node-step-plugin type='copyfile'>
+          <configuration>
+            <entry key='destinationPath' value='/dest/workspace' />
+            <entry key='echo' value='true' />
+            <entry key='recursive' value='true' />
+            <entry key='sourcePath' value='/src/workspace' />
+          </configuration>
+        </node-step-plugin>
+      </command>
+      <command>
+        <exec>rm -rf /src/workspace</exec>
+      </command>
+    </sequence>
+    <uuid>48462d57-f406-4ce8-be10-3fd32d54a638</uuid>
+  </job>
+</joblist>

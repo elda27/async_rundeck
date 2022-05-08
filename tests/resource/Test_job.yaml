@@ -1,0 +1,28 @@
+- defaultTab: nodes
+  description: Test job description
+  executionEnabled: true
+  id: 48462d57-f406-4ce8-be10-3fd32d54a638
+  loglevel: INFO
+  maxMultipleExecutions: '1'
+  multipleExecutions: true
+  name: Test job
+  nodeFilterEditable: false
+  plugins:
+    ExecutionLifecycle: null
+  retry: '3'
+  scheduleEnabled: true
+  sequence:
+    commands:
+    - exec: echo $(date)
+    - exec: sleep 0.1
+    - configuration:
+        destinationPath: /dest/workspace
+        echo: 'true'
+        recursive: 'true'
+        sourcePath: /src/workspace
+      nodeStep: true
+      type: copyfile
+    - exec: rm -rf /src/workspace
+    keepgoing: false
+    strategy: node-first
+  uuid: 48462d57-f406-4ce8-be10-3fd32d54a638

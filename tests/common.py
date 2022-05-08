@@ -23,7 +23,7 @@ def event_loop():
 rundeck_url = os.getenv("RUNDECK_URL")
 if rundeck_url is None:
 
-    @pytest.fixture(scope="module")
+    @pytest.fixture(scope="session")
     async def rundeck_service(docker_ip, docker_services) -> str:
         """Ensure that HTTP service is up and responsive."""
 
@@ -37,7 +37,7 @@ if rundeck_url is None:
 
 else:
 
-    @pytest.fixture(scope="module")
+    @pytest.fixture(scope="session")
     async def rundeck_service() -> str:
         for i in range(60):
             if is_responsive(rundeck_url):

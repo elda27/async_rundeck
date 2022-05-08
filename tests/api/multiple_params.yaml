@@ -1,0 +1,25 @@
+paths:
+  /api/26/job/{jobID}/retry/{executionID}:
+    post:
+      summary: Retry a failed job execution on failed nodes only or on the same as the execution. This is the same functionality as the `Retry Failed Nodes ...` button on the execution page.
+      operationId: jobRetryExecution
+      tags:
+      - job
+      - execution
+      parameters:
+      - name: jobID
+        in: path
+        required: true
+        type: string
+      - name: executionID
+        in: path
+        required: true
+        type: integer
+      - name: Request
+        in: body
+        required: false
+        schema: {$ref: '#/definitions/RetryExecutionRequest'}
+      responses:
+        '200':
+          description: Exected response to a valid request.
+          schema: {$ref: '#/definitions/ExecutionList'}
