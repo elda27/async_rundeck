@@ -24,12 +24,12 @@ jobs:
           pip install poetry && poetry install
       - name: test
         continue-on-error: true
-        run: poetry run poe test
+        run: poetry run pytest --cov=async_rundeck --cov-report=xml
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v2
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./.coverage
+          files: ./coverage.xml
           flags: unittests
           name: async_rundeck
           fail_ci_if_error: true 
