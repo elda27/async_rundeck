@@ -23,6 +23,7 @@ jobs:
         run: |
           pip install poetry && poetry install
       - name: test
+        continue-on-error: true
         run: poetry run poe test
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v2
