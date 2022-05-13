@@ -95,5 +95,5 @@ async def test_execute_job(rundeck: Rundeck):
     jobs = await rundeck.list_jobs(project_name)
 
     # Test run job
-    execution = await rundeck.run_job(jobs[0].id)
+    execution = await rundeck.execute_job(jobs[0].id)
     assert execution is not None

@@ -246,7 +246,7 @@ class Rundeck:
             server_node_uuid_filter=server_node_uuid_filter,
         )
 
-    async def run_job(
+    async def execute_job(
         self,
         job_id: str,
         *,
