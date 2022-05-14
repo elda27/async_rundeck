@@ -1,3 +1,6 @@
+[![codecov](https://codecov.io/gh/elda27/async_rundeck/branch/main/graph/badge.svg?token=wo3QBnKsKX)](https://codecov.io/gh/elda27/async_rundeck)
+
+
 # Asynchronous rundeck API client
 This is a rundeck API client implemeneted by aio-http.
 
