@@ -1,8 +1,13 @@
 [tool.poetry]
 name = "async_rundeck"
-version = "0.1.0"
-description = ""
+version = "0.1.2"
+description = "Asynchronous rundeck API client"
 authors = ["elda27 <kaz.birdstick@gmail.com>"]
+readme = "README.md"
+repository = "https://github.com/elda27/async_rundeck"
+homepage = "https://github.com/elda27/async_rundeck"
+
+keywords = ["rundeck", "asyncio"]
 
 [tool.poetry.dependencies]
 python = "^3.8"
