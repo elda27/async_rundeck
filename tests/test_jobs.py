@@ -97,3 +97,26 @@ async def test_execute_job(rundeck: Rundeck):
     # Test run job
     execution = await rundeck.execute_job(jobs[0].id)
     assert execution is not None
+
+
+@pytest.mark.asyncio
+async def test_upload_file(rundeck: Rundeck):
+    project_name = uuid4().hex
+    await rundeck.create_project(project_name)
+    job_content = (root_dir / "resource" / "file_upload.yaml").read_text()
+    status = await rundeck.import_jobs(
+        project_name,
+        job_content,
+        content_type="application/yaml",
+        uuid_option="remove",
+    )
+    assert len(status["succeeded"]) == 1
+
+    job = await rundeck.get_job_by_name(project_name, "FileUpload")
+    assert job is not None
+    id = await rundeck.upload_file_for_job(
+        job.id, option_name="JOB_CONFIG", file=job_content.encode("utf-8")
+    )
+
+    file_info_list = await rundeck.list_files_for_job(job.id)
+    assert id in [file_info.id for file_info in file_info_list]
