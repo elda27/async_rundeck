@@ -9,11 +9,13 @@ from async_rundeck.proto.definitions import (
     Execution,
     ExecutionList,
     Job,
+    JobBulkOperationResponse,
     JobInputFileInfo,
     Project,
 )
 from async_rundeck import proto
 from async_rundeck.exceptions import VersionError, RundeckError
+from async_rundeck.proto.job import JobScheduleBulkDisableRequest
 
 
 class Rundeck:
@@ -478,7 +480,7 @@ class Rundeck:
                     )
 
     async def upload_file_for_job(
-        self, job_id: str, option_name: str, file: bytes, file_name: str=None
+        self, job_id: str, option_name: str, file: bytes, file_name: str = None
     ) -> Optional[str]:
         """Upload file for job.
 
@@ -523,6 +525,72 @@ class Rundeck:
         """
         response = await proto.job_input_file_list(self.client, job_id)
         return response.files
+
+    async def enable_scheduling_job(self, job_id: str) -> bool:
+        """Enable scheduling for job.
+
+        Parameters
+        ----------
+        job_id : str
+
+        Response
+        ----------
+        bool
+            True if succceeded
+        """
+        response = await proto.job_schedule_enable(self.client, job_id)
+        return response.success
+
+    async def disable_scheduling_job(self, job_id: str) -> bool:
+        """Disable scheduling for job.
+
+        Parameters
+        ----------
+        job_id : str
+
+        Response
+        ----------
+        bool
+            True if succceeded
+        """
+        response = await proto.job_schedule_disable(self.client, job_id)
+        return response.success
+
+    async def enable_scheduling_jobs(
+        self, job_ids: List[str]
+    ) -> JobBulkOperationResponse:
+        """Enable scheduling for jobs.
+
+        Parameters
+        ----------
+        job_ids : st[str]
+
+        Response
+        ----------
+        JobBulkOperationResponse
+            Bulk operation results
+        """
+        return await proto.job_schedule_bulk_enable(
+            self.client, JobScheduleBulkDisableRequest(ids=job_ids)
+        )
+
+    async def disable_scheduling_jobs(
+        self, job_ids: List[str]
+    ) -> JobBulkOperationResponse:
+        """Disable scheduling for jobs.
+
+        Parameters
+        ----------
+        job_ids : List[str]
+
+        Response
+        ----------
+        JobBulkOperationResponse
+            Bulk operation results
+        """
+        return await proto.job_schedule_bulk_disable(
+            self.client, JobScheduleBulkDisableRequest(ids=job_ids)
+        )
 
     # Executions
     async def get_execution(

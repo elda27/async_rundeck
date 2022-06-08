@@ -1,10 +1,12 @@
 [![codecov](https://codecov.io/gh/elda27/async_rundeck/branch/main/graph/badge.svg?token=wo3QBnKsKX)](https://codecov.io/gh/elda27/async_rundeck)
 
-
 # Asynchronous rundeck API client
-This is a rundeck API client implemeneted by aio-http.
+
+This is a rundeck API client implemeneted by aio-http and pydantic.
+All API parameters and responses are annotated and user-friendly!
 
 ## Installation
+
 ```bash
 pip install async-rundeck
 ```
@@ -21,7 +23,7 @@ async def main():
     )
     project_name = uuid4().hex
     await rundeck.create_project(project_name)
-    
+
     job_content = (root_dir / "resource" / "Test_job.xml").read_text()
     # Import job
     status = await rundeck.import_jobs(
@@ -44,6 +46,7 @@ asyncio.run_until_complete(main())
 ```
 
 ## Features
+
 The items checked in the following list are implemented.
 
 - [ ] System Info
@@ -68,7 +71,8 @@ The items checked in the following list are implemented.
   - [ ] Delete all Executions for a Job
   - [x] Listing Running Executions
   - [ ] Execution Info
-  - [ ] List Input Files for an Execution
+  - [x] Upload files for an Execution.
+  - [x] List Input Files for an Execution
   - [x] Delete an Execution
   - [ ] Bulk Delete Executions
   - [ ] Execution Query
