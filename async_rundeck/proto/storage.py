@@ -3,21 +3,35 @@
 from enum import Enum
 from typing import List, Optional
 from pydantic import BaseModel, Field, parse_obj_as
-from async_rundeck.proto.json_types import Integer, Number, String, Boolean, Object
+from async_rundeck.proto.json_types import (
+    Integer,
+    Number,
+    String,
+    Boolean,
+    Object,
+    File,
+)
 import json
 from enum import Enum
 from typing import List, Optional, Union
 from pydantic import parse_raw_as, BaseModel, Field
-from async_rundeck.proto.json_types import Integer, Number, String, Boolean, Object
+from async_rundeck.proto.json_types import (
+    Integer,
+    Number,
+    String,
+    Boolean,
+    Object,
+    File,
+)
 from async_rundeck.client import RundeckClient
 from async_rundeck.misc import filter_none
 from async_rundeck.exceptions import RundeckError, VersionError
-from async_rundeck.proto.definitions import StorageKeyListResponse, Object
+from async_rundeck.proto.definitions import StorageKeyListResponse, File
 
 
 async def storage_key_get_material(
     session: RundeckClient, key_path: String, accept: String
-) -> Union[Object, None]:
+) -> Union["File", None]:
     """Get key material at the specified PATH"""
     if session.version < 26:
         raise VersionError(
@@ -34,7 +48,7 @@ async def storage_key_get_material(
         obj = await response.text()
         if response.ok:
             try:
-                response_type = {(200): Object, (404): None}[response.status]
+                response_type = {(200): File, (404): None}[response.status]
                 if response_type is None:
                     return None
                 elif response_type is String:
@@ -90,7 +104,7 @@ async def storage_key_get_metadata(
 async def storage_key_create(
     session: RundeckClient,
     path: String,
-    file: Object,
+    file: "File",
     *,
     content_type: Optional[String] = "application/pgp-keys",
 ) -> Union[None, None]:
@@ -103,10 +117,7 @@ async def storage_key_create(
         "/api/{version}/storage/keys/{path}", version=session.version, path=path
     )
     async with session.request(
-        "POST",
-        url,
-        data=json.dumps(file) if isinstance(file, dict) else file.json(),
-        params=filter_none(dict()),
+        "POST", url, data=file, params=filter_none(dict())
     ) as response:
         obj = await response.text()
         if response.ok:
@@ -131,7 +142,7 @@ async def storage_key_create(
 async def storage_key_update(
     session: RundeckClient,
     path: String,
-    file: Object,
+    file: "File",
     *,
     content_type: Optional[String] = "application/pgp-keys",
 ) -> None:
@@ -144,10 +155,7 @@ async def storage_key_update(
         "/api/{version}/storage/keys/{path}", version=session.version, path=path
     )
     async with session.request(
-        "PUT",
-        url,
-        data=json.dumps(file) if isinstance(file, dict) else file.json(),
-        params=filter_none(dict()),
+        "PUT", url, data=file, params=filter_none(dict())
     ) as response:
         obj = await response.text()
         if response.ok:
