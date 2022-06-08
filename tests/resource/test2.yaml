@@ -1,0 +1,53 @@
+- defaultTab: nodes
+  description: ''
+  executionEnabled: true
+  id: f3a19015-a845-4c81-96e2-5a4cc001fb04
+  loglevel: INFO
+  name: test2
+  nodeFilterEditable: false
+  options:
+  - delimiter: ","
+    hidden: true
+    label: ete
+    multivalued: true
+    name: fasda
+    required: true
+    value: '19,30'
+  - description: fileconfigraution
+    label: label
+    name: jobconfiguration
+    required: true
+    type: file
+  - description: Detal job
+    label: label-sd
+    name: option1
+  plugins:
+    ExecutionLifecycle: null
+  scheduleEnabled: true
+  sequence:
+    commands:
+    - exec: atess
+    - args: hoge
+      description: sda
+      fileExtension: .py
+      interpreterArgsQuoted: false
+      script: |-
+        improt datetime
+        print(datetime.datetime.now())
+      scriptInterpreter: python
+    - jobref:
+        args: sda
+        group: ''
+        name: test
+        nodeStep: 'true'
+        useName: 'true'
+        uuid: d87bea7f-16b4-46c3-8849-9ba79f9eace5
+    - scriptfile: /opts.sjh
+    - configuration:
+        command: sdadsa
+      description: ds
+      nodeStep: true
+      type: localexec
+    keepgoing: false
+    strategy: node-first
+  uuid: f3a19015-a845-4c81-96e2-5a4cc001fb04

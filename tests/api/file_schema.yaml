@@ -1,0 +1,32 @@
+paths:
+  /api/26/job/{id}/input/file:
+    post:
+      summary: Upload file as job option
+      operationId: jobInputFileUpload
+      tags:
+        - job
+      consumes:
+        - octet/stream
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+        - name: optionName
+          in: query
+          required: true
+          type: string
+        - name: fileName
+          in: query
+          required: true
+          type: string
+        - name: File
+          in: body
+          required: true
+          x-ms-parameter-location: method
+          schema:
+            type: object
+            format: file
+      responses:
+        "200":
+          description: Yay
