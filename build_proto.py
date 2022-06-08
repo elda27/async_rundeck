@@ -21,6 +21,7 @@ def main():
         "-w",
         "--work-dir",
         type=Path,
+        default=None,
         help="Working directory, if None a temporary directory will be created.",
     )
     parser.add_argument(
@@ -97,6 +98,7 @@ def create_scripts(work_dir: Path, output_dir: Path) -> None:
                                     ast.alias(name="String", asname=None),
                                     ast.alias(name="Boolean", asname=None),
                                     ast.alias(name="Object", asname=None),
+                                    ast.alias(name="File", asname=None),
                                 ],
                                 level=0,
                             ),
