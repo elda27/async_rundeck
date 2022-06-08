@@ -5,7 +5,13 @@ from aiohttp import FormData
 from pydantic import parse_raw_as
 from async_rundeck.client import RundeckClient
 
-from async_rundeck.proto.definitions import Execution, ExecutionList, Job, Project
+from async_rundeck.proto.definitions import (
+    Execution,
+    ExecutionList,
+    Job,
+    JobInputFileInfo,
+    Project,
+)
 from async_rundeck import proto
 from async_rundeck.exceptions import VersionError, RundeckError
 
@@ -179,6 +185,23 @@ class Rundeck:
         await proto.project_config_key_delete(self.client, project=name, key=key)
 
     # Jobs functions
+    async def get_job_by_name(self, project: str, name: str) -> Optional[Job]:
+        """Get a job by name.
+
+        Parameters
+        ----------
+        name : str
+            name of the job
+
+        Returns
+        -------
+        Optional[Job]
+            Job information
+        """
+        jobs = await self.list_jobs(project)
+        for job in jobs:
+            if job.name == name:
+                return job
 
     async def list_jobs(
         self,
@@ -453,6 +476,53 @@ class Rundeck:
                     raise RundeckError(
                         f"Connection diffused: {session.url}({response.status})\n{obj}"
                     )
+
+    async def upload_file_for_job(
+        self, job_id: str, option_name: str, file: bytes, file_name: str=None
+    ) -> Optional[str]:
+        """Upload file for job.
+
+        Parameters
+        ----------
+        job_id : str
+            Job id
+        option_name : str
+            name of option
+        file : bytes
+            byte array of the file
+
+        Returns
+        -------
+        Optional[str]
+            id of the uploaded file
+        """
+        with self.client.context_options(
+            {
+                "headers": {
+                    "Accept": "application/json",
+                    "Content-Type": "application/octet-stream",
+                }
+            }
+        ):
+            response = await proto.job_input_file_upload(
+                self.client, job_id, option_name, file_name=file_name, file=file
+            )
+            return response.options.get(option_name, None)
+
+    async def list_files_for_job(self, job_id: str) -> List[JobInputFileInfo]:
+        """List files for job.
+
+        Parameters
+        ----------
+        job_id : str
+
+        Returns
+        -------
+        List[JobInputFileInfo]
+            information of uploaded files.
+        """
+        response = await proto.job_input_file_list(self.client, job_id)
+        return response.files
 
     # Executions
     async def get_execution(
