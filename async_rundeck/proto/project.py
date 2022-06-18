@@ -3,16 +3,30 @@
 from enum import Enum
 from typing import List, Optional
 from pydantic import BaseModel, Field, parse_obj_as
-from async_rundeck.proto.json_types import Integer, Number, String, Boolean, Object
+from async_rundeck.proto.json_types import (
+    Integer,
+    Number,
+    String,
+    Boolean,
+    Object,
+    File,
+)
 import json
 from enum import Enum
 from typing import List, Optional, Union
 from pydantic import parse_raw_as, BaseModel, Field
-from async_rundeck.proto.json_types import Integer, Number, String, Boolean, Object
+from async_rundeck.proto.json_types import (
+    Integer,
+    Number,
+    String,
+    Boolean,
+    Object,
+    File,
+)
 from async_rundeck.client import RundeckClient
 from async_rundeck.misc import filter_none
 from async_rundeck.exceptions import RundeckError, VersionError
-from async_rundeck.proto.definitions import Project, Object
+from async_rundeck.proto.definitions import Project, Object, File
 
 
 class ProjectCreateRequest(BaseModel):
@@ -429,14 +443,14 @@ async def project_jobs_export(
 async def project_jobs_import(
     session: RundeckClient,
     project: String,
-    file: Object,
+    file: "File",
     *,
     content_type: Optional[String] = "application/xml",
     accept: Optional[String] = "application/xml",
     file_format: Optional[String] = "xml",
     dupe_option: Optional[String] = "create",
     uuid_option: Optional[String] = "preserve",
-) -> Object:
+) -> "File":
     """Import job definitions in XML or YAML formats."""
     if session.version < 26:
         raise VersionError(
@@ -450,7 +464,7 @@ async def project_jobs_import(
     async with session.request(
         "POST",
         url,
-        data=json.dumps(file) if isinstance(file, dict) else file.json(),
+        data=file,
         params=filter_none(
             dict(fileFormat=file_format, dupeOption=dupe_option, uuidOption=uuid_option)
         ),
@@ -458,7 +472,7 @@ async def project_jobs_import(
         obj = await response.text()
         if response.ok:
             try:
-                response_type = {(200): Object}[response.status]
+                response_type = {(200): File}[response.status]
                 if response_type is None:
                     return None
                 elif response_type is String:
@@ -478,7 +492,7 @@ async def project_jobs_import(
 async def project_archive_import(
     session: RundeckClient,
     project: String,
-    file: Object,
+    file: "File",
     *,
     job_uuid_option: Optional[String] = "remove",
     import_executions: Optional[Boolean] = None,
@@ -498,7 +512,7 @@ async def project_archive_import(
     async with session.request(
         "PUT",
         url,
-        data=json.dumps(file) if isinstance(file, dict) else file.json(),
+        data=file,
         params=filter_none(
             dict(
                 jobUuidOption=job_uuid_option,
@@ -539,7 +553,7 @@ async def project_archive_export_sync(
     export_configs: Optional[Boolean] = None,
     export_readmes: Optional[Boolean] = None,
     export_acls: Optional[Boolean] = None,
-) -> Object:
+) -> "File":
     """Export archive of project synchronously"""
     if session.version < 26:
         raise VersionError(
@@ -569,7 +583,7 @@ async def project_archive_export_sync(
         obj = await response.text()
         if response.ok:
             try:
-                response_type = {(200): Object}[response.status]
+                response_type = {(200): File}[response.status]
                 if response_type is None:
                     return None
                 elif response_type is String:

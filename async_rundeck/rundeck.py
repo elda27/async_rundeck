@@ -5,9 +5,17 @@ from aiohttp import FormData
 from pydantic import parse_raw_as
 from async_rundeck.client import RundeckClient
 
-from async_rundeck.proto.definitions import Execution, ExecutionList, Job, Project
+from async_rundeck.proto.definitions import (
+    Execution,
+    ExecutionList,
+    Job,
+    JobBulkOperationResponse,
+    JobInputFileInfo,
+    Project,
+)
 from async_rundeck import proto
 from async_rundeck.exceptions import VersionError, RundeckError
+from async_rundeck.proto.job import JobScheduleBulkDisableRequest
 
 
 class Rundeck:
@@ -179,6 +187,23 @@ class Rundeck:
         await proto.project_config_key_delete(self.client, project=name, key=key)
 
     # Jobs functions
+    async def get_job_by_name(self, project: str, name: str) -> Optional[Job]:
+        """Get a job by name.
+
+        Parameters
+        ----------
+        name : str
+            name of the job
+
+        Returns
+        -------
+        Optional[Job]
+            Job information
+        """
+        jobs = await self.list_jobs(project)
+        for job in jobs:
+            if job.name == name:
+                return job
 
     async def list_jobs(
         self,
@@ -290,6 +315,16 @@ class Rundeck:
             ),
         )
 
+    async def delete_job(self, job_id: str) -> None:
+        """Delete a job.
+
+        Parameters
+        ----------
+        job_id : str
+            job id
+        """
+        await proto.job_delete(self.client, id=job_id)
+
     async def retry_job(
         self, job_id: str, execution_id: int, *, retry_count: int
     ) -> proto.Execution:
@@ -370,7 +405,7 @@ class Rundeck:
         project : str
             Project name
 
-        content_type: Literal[""], optional
+        content_type: Literal["x-www-form-urlencoded", "multipart/form-data", "application/xml", "application/yaml"], optional
             [Not implemeneted] Content-Type: x-www-form-urlencoded, with a xmlBatch
                 request parameter containing the input content
             [Not implemeneted] Content-Type: multipart/form-data multipart MIME request part
@@ -453,6 +488,119 @@ class Rundeck:
                     raise RundeckError(
                         f"Connection diffused: {session.url}({response.status})\n{obj}"
                     )
+
+    async def upload_file_for_job(
+        self, job_id: str, option_name: str, file: bytes, file_name: str = None
+    ) -> Optional[str]:
+        """Upload file for job.
+
+        Parameters
+        ----------
+        job_id : str
+            Job id
+        option_name : str
+            name of option
+        file : bytes
+            byte array of the file
+
+        Returns
+        -------
+        Optional[str]
+            id of the uploaded file
+        """
+        with self.client.context_options(
+            {
+                "headers": {
+                    "Accept": "application/json",
+                    "Content-Type": "application/octet-stream",
+                }
+            }
+        ):
+            response = await proto.job_input_file_upload(
+                self.client, job_id, option_name, file_name=file_name, file=file
+            )
+            return response.options.get(option_name, None)
+
+    async def list_files_for_job(self, job_id: str) -> List[JobInputFileInfo]:
+        """List files for job.
+
+        Parameters
+        ----------
+        job_id : str
+
+        Returns
+        -------
+        List[JobInputFileInfo]
+            information of uploaded files.
+        """
+        response = await proto.job_input_file_list(self.client, job_id)
+        return response.files
+
+    async def enable_scheduling_job(self, job_id: str) -> bool:
+        """Enable scheduling for job.
+
+        Parameters
+        ----------
+        job_id : str
+
+        Response
+        ----------
+        bool
+            True if succceeded
+        """
+        response = await proto.job_schedule_enable(self.client, job_id)
+        return response.success
+
+    async def disable_scheduling_job(self, job_id: str) -> bool:
+        """Disable scheduling for job.
+
+        Parameters
+        ----------
+        job_id : str
+
+        Response
+        ----------
+        bool
+            True if succceeded
+        """
+        response = await proto.job_schedule_disable(self.client, job_id)
+        return response.success
+
+    async def enable_scheduling_jobs(
+        self, job_ids: List[str]
+    ) -> JobBulkOperationResponse:
+        """Enable scheduling for jobs.
+
+        Parameters
+        ----------
+        job_ids : st[str]
+
+        Response
+        ----------
+        JobBulkOperationResponse
+            Bulk operation results
+        """
+        return await proto.job_schedule_bulk_enable(
+            self.client, JobScheduleBulkDisableRequest(ids=job_ids)
+        )
+
+    async def disable_scheduling_jobs(
+        self, job_ids: List[str]
+    ) -> JobBulkOperationResponse:
+        """Disable scheduling for jobs.
+
+        Parameters
+        ----------
+        job_ids : List[str]
+
+        Response
+        ----------
+        JobBulkOperationResponse
+            Bulk operation results
+        """
+        return await proto.job_schedule_bulk_disable(
+            self.client, JobScheduleBulkDisableRequest(ids=job_ids)
+        )
 
     # Executions
     async def get_execution(

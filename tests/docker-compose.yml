@@ -1,3 +1,4 @@
+version: '3'
 services:
   rundeck:
     image: rundeck/rundeck:4.1.0

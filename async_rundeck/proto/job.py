@@ -3,12 +3,26 @@
 from enum import Enum
 from typing import List, Optional
 from pydantic import BaseModel, Field, parse_obj_as
-from async_rundeck.proto.json_types import Integer, Number, String, Boolean, Object
+from async_rundeck.proto.json_types import (
+    Integer,
+    Number,
+    String,
+    Boolean,
+    Object,
+    File,
+)
 import json
 from enum import Enum
 from typing import List, Optional, Union
 from pydantic import parse_raw_as, BaseModel, Field
-from async_rundeck.proto.json_types import Integer, Number, String, Boolean, Object
+from async_rundeck.proto.json_types import (
+    Integer,
+    Number,
+    String,
+    Boolean,
+    Object,
+    File,
+)
 from async_rundeck.client import RundeckClient
 from async_rundeck.misc import filter_none
 from async_rundeck.exceptions import RundeckError, VersionError
@@ -23,7 +37,8 @@ from async_rundeck.proto.definitions import (
     RetryExecutionRequest,
     JobMetadata,
     JobBulkOperationResponse,
-    Object,
+    JobInputFileUploadResponse,
+    File,
     JobInputFileListResponse,
     JobInputFileInfo,
     WorkflowStep,
@@ -277,7 +292,7 @@ async def job_retry_execution(
 
 async def job_get(
     session: RundeckClient, id: String, *, format: Optional[String] = "xml"
-) -> Union[Object, None]:
+) -> Union["File", None]:
     """Export a single job definition in XML or YAML formats."""
     if session.version < 26:
         raise VersionError(
@@ -290,7 +305,7 @@ async def job_get(
         obj = await response.text()
         if response.ok:
             try:
-                response_type = {(200): Object, (404): None}[response.status]
+                response_type = {(200): File, (404): None}[response.status]
                 if response_type is None:
                     return None
                 elif response_type is String:
@@ -707,8 +722,8 @@ async def job_input_file_upload(
     id: String,
     option_name: String,
     file_name: String,
-    file: Object,
-) -> None:
+    file: "File",
+) -> JobInputFileUploadResponse:
     """Upload file as job option"""
     if session.version < 26:
         raise VersionError(
@@ -720,13 +735,13 @@ async def job_input_file_upload(
     async with session.request(
         "POST",
         url,
-        data=json.dumps(file) if isinstance(file, dict) else file.json(),
+        data=file,
         params=filter_none(dict(optionName=option_name, fileName=file_name)),
     ) as response:
         obj = await response.text()
         if response.ok:
             try:
-                response_type = {(200): None}[response.status]
+                response_type = {(200): JobInputFileUploadResponse}[response.status]
                 if response_type is None:
                     return None
                 elif response_type is String:
@@ -743,7 +758,7 @@ async def job_input_file_upload(
             )
 
 
-async def job_input_file_upload(
+async def job_input_file_list(
     session: RundeckClient, id: String
 ) -> JobInputFileListResponse:
     """List uploaded input files for job"""

@@ -1,5 +1,5 @@
 import json
-from typing import TypeVar, NewType
+from typing import TypeVar, NewType, NewType
 
 T = TypeVar("T")
 
@@ -8,5 +8,6 @@ String = str
 Boolean = bool
 Integer = int
 Object = dict
+File = NewType("File", bytes)
 
-__all__ = ["Number", "String", "Boolean", "Integer", "Object"]
+__all__ = ["Number", "String", "Boolean", "Integer", "Object", "File"]

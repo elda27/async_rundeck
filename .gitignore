@@ -6,3 +6,4 @@ __pycache__
 .coverage
 tests/schema/*.test.py
 tests/api/*.test.py
+dist/

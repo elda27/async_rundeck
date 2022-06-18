@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, Dict, List, Optional, OrderedDict
+from typing import Any, Dict, List, Literal, Optional, OrderedDict
 import stringcase
 
 import yaml
@@ -16,6 +16,7 @@ class Property(BaseModel):
     enum: Optional[List[Any]]
     ref: str = Field(None, alias="$ref")
     description: Optional[str]
+    format: Optional[Literal["file"]]
 
 
 Property.update_forward_refs()
@@ -60,6 +61,7 @@ def convert_schema(api_spec_dir: Path) -> ast.Module:
                     ast.alias(name="String", asname=None),
                     ast.alias(name="Boolean", asname=None),
                     ast.alias(name="Object", asname=None),
+                    ast.alias(name="File", asname=None),
                 ],
                 level=0,
             ),
@@ -241,7 +243,10 @@ def _parse_value(
         if refs is not None and type not in refs:
             refs[definition.ref] = type
     else:
-        type = definition.type
+        if definition.format == "file":
+            type = "File"
+        else:
+            type = definition.type
 
     return ast.AnnAssign(
         target=ast.Name(id=_format_property_name(name), ctx=ast.Store()),

@@ -3,7 +3,14 @@
 from enum import Enum
 from typing import List, Optional, Union
 from pydantic import BaseModel, Field
-from async_rundeck.proto.json_types import Integer, Number, String, Boolean, Object
+from async_rundeck.proto.json_types import (
+    Integer,
+    Number,
+    String,
+    Boolean,
+    Object,
+    File,
+)
 
 
 class User(BaseModel):
@@ -248,6 +255,11 @@ class JobBulkOperationResponse(BaseModel):
     failed: Optional[List["BulkJobFailedInfo"]] = Field(alias="failed")
 
 
+class JobInputFileUploadResponse(BaseModel):
+    total: Number = Field(alias="total")
+    options: Object = Field(alias="options")
+
+
 class JobInputFileListResponse(BaseModel):
     paging: "Paging" = Field(alias="paging")
     files: List["JobInputFileInfo"] = Field(alias="files")
@@ -268,7 +280,7 @@ class JobInputFileInfo(BaseModel):
     job_id: String = Field(alias="jobId")
     date_created: String = Field(alias="dateCreated")
     server_node_uuid: String = Field(alias="serverNodeUUID")
-    file_name: String = Field(alias="fileName")
+    file_name: Optional[String] = Field(alias="fileName")
     size: Optional[Integer] = Field(alias="size")
     expiration_date: String = Field(alias="expirationDate")
     exec_id: Optional[String] = Field(alias="execId")

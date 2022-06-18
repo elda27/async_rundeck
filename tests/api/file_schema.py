@@ -6,26 +6,24 @@ from async_rundeck.proto.json_types import Integer, Number, String, Boolean, Obj
 from async_rundeck.client import RundeckClient
 from async_rundeck.misc import filter_none
 from async_rundeck.exceptions import RundeckError, VersionError
-from async_rundeck.proto.definitions import ExecutionList, RetryExecutionRequest, RetryExecutionRequest
+from async_rundeck.proto.definitions import File
 
 
-async def job_retry_execution(session: RundeckClient, job_id: String,
-    execution_id: Integer, *, request: Optional["RetryExecutionRequest"
-]=None
-    ) ->ExecutionList:
-    """Retry a failed job execution on failed nodes only or on the same as the execution. This is the same functionality as the `Retry Failed Nodes ...` button on the execution page."""
+async def job_input_file_upload(session: RundeckClient, id: String,
+    option_name: String, file_name: String, file: "File"
+) ->None:
+    """Upload file as job option"""
     if session.version < 26:
         raise VersionError(
             f'Insufficient api version error, Required >{session.version}')
-    url = session.format_url('/api/{version}/job/{jobID}/retry/{executionID}',
-        version=session.version, jobID=job_id, executionID=execution_id)
-    async with session.request('POST', url, data=json.dumps(request) if
-        isinstance(request, dict) else request.json(), params=filter_none(
-        dict())) as response:
+    url = session.format_url('/api/{version}/job/{id}/input/file', version=
+        session.version, id=id)
+    async with session.request('POST', url, data=file, params=filter_none(
+        dict(optionName=option_name, fileName=file_name))) as response:
         obj = await response.text()
         if response.ok:
             try:
-                response_type = {(200): ExecutionList}[response.status]
+                response_type = {(200): None}[response.status]
                 if response_type is None:
                     return None
                 elif response_type is String:

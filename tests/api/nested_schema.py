@@ -2,7 +2,7 @@ import json
 from enum import Enum
 from typing import List, Optional, Union
 from pydantic import parse_raw_as, BaseModel, Field
-from async_rundeck.proto.json_types import Integer, Number, String, Boolean, Object
+from async_rundeck.proto.json_types import Integer, Number, String, Boolean, Object, File
 from async_rundeck.client import RundeckClient
 from async_rundeck.misc import filter_none
 from async_rundeck.exceptions import RundeckError, VersionError

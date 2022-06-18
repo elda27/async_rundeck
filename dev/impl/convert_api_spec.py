@@ -12,7 +12,11 @@ from dev.impl.convert_schema import (
     Property,
     _as_optional_if_required,
 )
-from dev.impl.special_cases import invert_property, special_case_property
+from dev.impl.special_cases import (
+    invert_property,
+    special_case_property,
+    ignore_definition_types,
+)
 
 ParameterTypes = Literal["query", "path", "header", "cookie", "body"]
 
@@ -116,7 +120,7 @@ def convert_api_spec(spec_file: Path) -> ast.AST:
     new_classes = []
     for name, classdef in cache.items():
         if classdef is None:
-            if name not in ["Object", "String", "Number", "Boolean", "Array"]:
+            if name not in ignore_definition_types:
                 defined_classes.append(ast.alias(name=name.strip('"\n'), asname=None))
         else:
             new_classes.append(classdef)
@@ -156,6 +160,7 @@ def convert_api_spec(spec_file: Path) -> ast.AST:
                 ast.alias(name="String", asname=None),
                 ast.alias(name="Boolean", asname=None),
                 ast.alias(name="Object", asname=None),
+                ast.alias(name="File", asname=None),
             ],
             level=0,
         ),
@@ -331,9 +336,13 @@ def format_query_kws(query_kws: Dict[str, ast.AST]) -> str:
     )
 
 
-def format_body_kws(body: dict) -> str:
-    for k in body.keys():
-        return f"json.dumps({k}) if isinstance({k}, dict) else {k}.json()"
+def format_body_kws(body: Dict[str, ast.AST]) -> str:
+    for k, obj_ast in body.items():
+        if hasattr(obj_ast, "annotation"):
+            if astor.to_source(obj_ast.annotation).strip('"\n ') == "File":
+                return obj_ast.arg
+            else:
+                return f"json.dumps({k}) if isinstance({k}, dict) else {k}.json()"
     return "None"
 
 

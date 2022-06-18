@@ -1,5 +1,6 @@
 import stringcase
 
+# Variable names
 special_case_property = {
     "serverNodeUUID": "server_node_uuid",
     "serverNodeUUIDFilter": "server_node_uuid_filter",
@@ -26,3 +27,15 @@ def invert_property(name: str) -> str:
         return invert_special_case_property[name]
     else:
         return stringcase.camelcase(name)
+
+
+# Something ignored objects
+ignore_definition_types = [
+    "Object",
+    "String",
+    "Number",
+    "Boolean",
+    "Array",
+    "Body",
+    "File",
+]
