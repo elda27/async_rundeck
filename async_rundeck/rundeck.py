@@ -315,6 +315,16 @@ class Rundeck:
             ),
         )
 
+    async def delete_job(self, job_id: str) -> None:
+        """Delete a job.
+
+        Parameters
+        ----------
+        job_id : str
+            job id
+        """
+        await proto.job_delete(self.client, id=job_id)
+
     async def retry_job(
         self, job_id: str, execution_id: int, *, retry_count: int
     ) -> proto.Execution:
@@ -395,7 +405,7 @@ class Rundeck:
         project : str
             Project name
 
-        content_type: Literal[""], optional
+        content_type: Literal["x-www-form-urlencoded", "multipart/form-data", "application/xml", "application/yaml"], optional
             [Not implemeneted] Content-Type: x-www-form-urlencoded, with a xmlBatch
                 request parameter containing the input content
             [Not implemeneted] Content-Type: multipart/form-data multipart MIME request part
