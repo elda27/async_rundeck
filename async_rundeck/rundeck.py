@@ -26,8 +26,11 @@ class Rundeck:
         username: str = None,
         password: str = None,
         api_version: int = None,
+        allow_redirects: bool = None,
     ) -> None:
-        self.client = RundeckClient(url, token, username, password, api_version)
+        self.client = RundeckClient(
+            url, token, username, password, api_version, allow_redirects=allow_redirects
+        )
 
     async def __aenter__(self):
         await self.client.__aenter__()

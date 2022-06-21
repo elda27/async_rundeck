@@ -21,6 +21,7 @@ class RundeckClient:
         username: str = None,
         password: str = None,
         api_version: int = None,
+        allow_redirects: bool = None,
     ) -> None:
         self.url = url or os.getenv("RUNDECK_URL", "http://localhost:4440")
         self.url = self.url.rstrip("/")
@@ -28,6 +29,9 @@ class RundeckClient:
         self.username = username or os.getenv("RUNDECK_USERNAME")
         self.password = password or os.getenv("RUNDECK_PASSWORD")
         self.api_version = api_version or int(os.getenv("RUNDECK_API_VERSION", "32"))
+        self.allow_redirects = allow_redirects or bool(
+            os.getenv("RUNDECK_ALLOW_REDIRECTS", False)
+        )
         if self.token is None and (self.password is None or self.password is None):
             raise ValueError("Cannot authenticate without a token or username/password")
         self.session_id: str = None
@@ -128,8 +132,7 @@ class RundeckClient:
         url = self.url + "/j_security_check"
         p = {"j_username": self.username, "j_password": self.password}
         async with session.post(
-            url,
-            data=p,
+            url, data=p, allow_redirects=self.allow_redirects
         ) as response:
             if len(response.history) > 1:
                 async with response.history[0] as r:
