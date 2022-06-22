@@ -100,6 +100,27 @@ async def test_execute_job(rundeck: Rundeck):
 
 
 @pytest.mark.asyncio
+async def test_delete_job(rundeck: Rundeck):
+    project_name = uuid4().hex
+    await rundeck.create_project(project_name)
+    job_content = (root_dir / "resource" / "Test_job.xml").read_text()
+    status = await rundeck.import_jobs(
+        project_name,
+        job_content,
+        content_type="application/xml",
+        uuid_option="remove",
+    )
+    assert len(status["succeeded"]) == 1
+
+    jobs = await rundeck.list_jobs(project_name)
+    assert len(jobs) == 1
+
+    # Test delete job
+    await rundeck.delete_job(jobs[0].id)
+    assert len(await rundeck.list_jobs(project_name)) == 0
+
+
+@pytest.mark.asyncio
 async def test_upload_file(rundeck: Rundeck):
     project_name = uuid4().hex
     await rundeck.create_project(project_name)
