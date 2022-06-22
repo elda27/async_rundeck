@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "async_rundeck"
-version = "0.1.5"
+version = "0.1.6"
 description = "Asynchronous rundeck API client"
 authors = ["elda27 <kaz.birdstick@gmail.com>"]
 readme = "README.md"
