@@ -32,7 +32,7 @@ def convert_api_specs(api_spec_dir: Path) -> Dict[str, ast.AST]:
 
 def convert_api_spec(spec_file: Path) -> ast.AST:
     with open(spec_file) as fp:
-        spec = yaml.load(fp)
+        spec = yaml.safe_load(fp)
 
     functions = []
     cache: Dict[str, ast.ClassDef] = {}
