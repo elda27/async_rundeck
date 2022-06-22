@@ -94,7 +94,7 @@ class Rundeck:
         Optional[Project]
             Project information
         """
-        await proto.project_get(self.client, project=name)
+        return Project.parse_obj(await proto.project_get(self.client, project=name))
 
     async def get_project_config(self, name: str) -> Optional[Dict[str, Any]]:
         """Get the configuration of a project.
