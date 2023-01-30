@@ -348,3 +348,44 @@ async def execution_output_get(
             raise RundeckError(
                 f"Connection diffused: {session.url}({response.status})\n{obj}"
             )
+
+
+async def execution_abort(
+    session: RundeckClient,
+    id: String,
+    *,
+    as_user: Optional[String] = None,
+    force_incomplete: Optional[Boolean] = None,
+) -> None:
+    """Abort a running execution by ID"""
+    if session.version < 11:
+        raise VersionError(
+            f"Insufficient api version error, Required >{session.version}"
+        )
+    url = session.format_url(
+        "/api/{version}/execution/{id}/abort", version=session.version, id=id
+    )
+    async with session.request(
+        "GET",
+        url,
+        data=None,
+        params=filter_none(dict(asUser=as_user, forceIncomplete=force_incomplete)),
+    ) as response:
+        obj = await response.text()
+        if response.ok:
+            try:
+                response_type = {(200): None}[response.status]
+                if response_type is None:
+                    return None
+                elif response_type is String:
+                    return obj
+                else:
+                    return parse_raw_as(response_type, obj)
+            except KeyError:
+                raise RundeckError(
+                    f"Unknwon response code: {session.url}({response.status})"
+                )
+        else:
+            raise RundeckError(
+                f"Connection diffused: {session.url}({response.status})\n{obj}"
+            )

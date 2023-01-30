@@ -1,0 +1,3 @@
+[submodule "rundeck-api-specs"]
+	path = rundeck-api-specs
+	url = https://github.com/elda27/rundeck-api-specs

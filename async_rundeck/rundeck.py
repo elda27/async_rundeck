@@ -1,10 +1,12 @@
 from ctypes import Union
 from typing import Any, Dict, List, Literal, Optional, Tuple
+
 from aiohttp import FormData
-
 from pydantic import parse_raw_as
-from async_rundeck.client import RundeckClient
 
+from async_rundeck import proto
+from async_rundeck.client import RundeckClient
+from async_rundeck.exceptions import RundeckError, VersionError
 from async_rundeck.proto.definitions import (
     Execution,
     ExecutionList,
@@ -13,8 +15,6 @@ from async_rundeck.proto.definitions import (
     JobInputFileInfo,
     Project,
 )
-from async_rundeck import proto
-from async_rundeck.exceptions import VersionError, RundeckError
 from async_rundeck.proto.job import JobScheduleBulkDisableRequest
 
 
@@ -661,3 +661,13 @@ class Rundeck:
             executions
         """
         return await proto.execution_list_running(self.client, project=project)
+
+    async def abort_execution(self, execution_id: str) -> None:
+        """Abort an execution.
+
+        Parameters
+        ----------
+        execution_id : str
+            Execution id
+        """
+        return await proto.execution_abort(self.client, execution_id)
